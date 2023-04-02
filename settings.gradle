@@ -1,0 +1,3 @@
+include ':ParentModel'
+include ':app'
+rootProject.name = "ShoppaZingKDS"

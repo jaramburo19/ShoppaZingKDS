@@ -1,0 +1,93 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+apply plugin: 'kotlin-kapt'
+android {
+    compileSdkVersion 32
+    buildToolsVersion "29.0.3"
+
+    defaultConfig {
+        applicationId "com.byteswiz.shoppazingkds"
+        minSdkVersion 16
+        targetSdkVersion 32
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    namespace 'com.byteswiz.shoppazingkds'
+}
+
+dependencies {
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'androidx.core:core-ktx:1.3.2'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'com.google.android.material:material:1.3.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+
+    //Header Footer
+    implementation 'com.mikhaellopez:hfrecyclerview-kotlin:1.1.1'
+
+    //DB
+    implementation 'io.paperdb:paperdb:2.6'
+
+
+    implementation project(":ParentModel")
+
+
+    //Coroutine Worker
+    implementation "androidx.work:work-runtime-ktx:2.5.0"
+
+    //LIVE DATA
+    // lifecycle
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.2.0"
+    kapt "androidx.lifecycle:lifecycle-compiler:2.2.0"
+    implementation "androidx.activity:activity-ktx:1.1.0"
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+
+
+    //Network Retrofit
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    //implementation 'com.squareup.okhttp3:okhttp:4.7.2'
+    //implementation 'com.squareup.okhttp3:okhttp:3.2.0'
+    implementation 'com.squareup.picasso:picasso:2.71828'
+
+    /*implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.okhttp3:okhttp:3.12.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.12.0'*/
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:3.14.9") { force = true }
+    implementation "com.squareup.okhttp3:logging-interceptor:3.12.8"
+
+
+    //App Intro
+    // AndroidX Capable version
+    implementation 'com.github.AppIntro:AppIntro:6.1.0'
+
+    // *** OR ***
+
+    // Latest version compatible with the old Support Library
+    //implementation 'com.github.AppIntro:AppIntro:4.2.3'
+
+}

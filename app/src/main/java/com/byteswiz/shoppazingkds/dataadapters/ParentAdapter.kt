@@ -14,6 +14,7 @@ import android.widget.Chronometer
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.DividerItemDecoration.*
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -136,9 +137,17 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
             }
         }
 
+        holder.constHeader.setOnLongClickListener(){it->
+            //holder.btnPreparing.visibility=View.GONE
+            holder.card_view.setBackgroundResource(R.drawable.card_view_border_preparing);
+            mListener!!.onPreparingClicked( parent.receiptNo, parent.localUniqueId,holder.layoutPosition,true)
 
-       /* if(parent.orderStatusId== ORDER_STATUS_PREPARING)
-            return*/
+            return@setOnLongClickListener true
+        }
+
+
+        /* if(parent.orderStatusId== ORDER_STATUS_PREPARING)
+             return*/
 
         try {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -196,7 +205,7 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
         var adapter = ExampleAdapter(parent.diningOptionName, parent.qNo, parent.orderStatusId,parent.TodaysOrderNo, object : OnButtonClicked{
             override fun onPreparingClicked() {
                 holder.card_view.setBackgroundResource(R.drawable.card_view_border_preparing);
-                mListener!!.onPreparingClicked( parent.receiptNo, parent.localUniqueId,holder.layoutPosition)
+                mListener!!.onPreparingClicked( parent.receiptNo, parent.localUniqueId,holder.layoutPosition,false)
 
             }
             override fun onCompletedClicked() {
@@ -206,10 +215,8 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
             }
 
             override fun onRecallClicked() {
-                if(parent.TodaysOrderNo!=null)
-                    mListener!!.onRecallClicked(parent.receiptNo, parent.localUniqueId)
-                /* else
-                     mListener!!.onRecallClicked(parent.receiptNo,"")*/
+                mListener!!.onRecallClicked(parent.receiptNo, parent.localUniqueId)
+
             }
 
             override fun onChildItemClicked(parentModelId: Int, itemId: Long, flag: Boolean) {
@@ -218,8 +225,6 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
 
         })
 
-        /*if(parent.children!=null)
-            adapter.data = parent.children!!*/
 
 
         holder.recyclerView.adapter = adapter
@@ -267,6 +272,7 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
         val txtTicketName: TextView = itemView.findViewById(R.id.txtTicketName)
         val txtReceiptNo: TextView = itemView.findViewById(R.id.txtReceiptNo)
         val card_view: CardView =itemView.findViewById(R.id.card_view)
+        val constHeader: ConstraintLayout =itemView.findViewById(R.id.constHeader)
 
 
 

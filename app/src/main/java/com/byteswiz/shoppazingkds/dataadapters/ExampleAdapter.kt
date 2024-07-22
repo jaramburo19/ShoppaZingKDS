@@ -36,6 +36,7 @@ class ExampleAdapter(var diningOptionName: String,
             is ViewHolder.HeaderViewHolder -> {
                 holder.bind(diningOptionName,qNo)
 
+
                 when(orderStatusId){
                     2->{
                         holder.btnRecall.visibility=View.GONE

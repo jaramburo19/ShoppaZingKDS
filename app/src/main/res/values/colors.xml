@@ -18,4 +18,6 @@
     <color name="colorLightBlue">#41a9cc</color>
     <color name="colorPurple">#8b63b2</color>
 
+    <color name="lightGray">#d3d3d3</color>
+
 </resources>

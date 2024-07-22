@@ -10,8 +10,8 @@ android {
         applicationId "com.byteswiz.shoppazingkds"
         minSdkVersion 21
         targetSdkVersion 34
-        versionCode 8
-        versionName "1.0.008"
+        versionCode 9
+        versionName "1.0.009"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

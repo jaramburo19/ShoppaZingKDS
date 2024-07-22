@@ -109,30 +109,33 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <androidx.core.widget.NestedScrollView
+       <!-- <androidx.core.widget.NestedScrollView
             card_view:layout_constraintStart_toStartOf="parent"
             card_view:layout_constraintTop_toBottomOf="@+id/constHeader"
             card_view:layout_constraintEnd_toEndOf="parent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/scroll">
-            <LinearLayout
+
+        </androidx.core.widget.NestedScrollView>-->
+
+        <LinearLayout
+            card_view:layout_constraintStart_toStartOf="parent"
+            card_view:layout_constraintTop_toBottomOf="@+id/constHeader"
+            card_view:layout_constraintEnd_toEndOf="parent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_child"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:padding="10dp"
+                android:orientation="vertical"
+                tools:layout_editor_absoluteX="74dp"   />
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_child"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="10dp"
-                    android:orientation="vertical"
-                    tools:layout_editor_absoluteX="74dp"   />
-
-            </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
-
-
+        </LinearLayout>
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>

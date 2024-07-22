@@ -2,7 +2,10 @@ package com.byteswiz.shoppazingkds.dataadapters
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.LayoutInflater
 import android.view.View
@@ -21,17 +24,20 @@ import com.byteswiz.shoppazingkds.cart.ShoppingCart
 import com.byteswiz.shoppazingkds.interfaces.OnButtonClicked
 import com.byteswiz.shoppazingkds.interfaces.OnParentButtonClicked
 import com.byteswiz.shoppazingkds.kds_timers.CountUpTimer
+import com.byteswiz.shoppazingkds.roomdb.AppDatabase
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_TYPES_ONLINE_DELIVERY
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_TYPES_ONLINE_PICKUP
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_TYPES_WALKIN
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 
-class ParentAdapter(private var activity:Activity, private var parents: MutableList<ParentModel>, listener: OnParentButtonClicked) :    RecyclerView.Adapter<ParentAdapter.ViewHolder>(){
+class ParentAdapter(var context: Context, private var activity:Activity, private var parents: MutableList<ParentModel>, listener: OnParentButtonClicked) :    RecyclerView.Adapter<ParentAdapter.ViewHolder>(){
     private val viewPool = RecyclerView.RecycledViewPool()
     private val _activity = activity
+    private  val _context = context
 
     private var mListener: OnParentButtonClicked? = null
     private lateinit var mRecentlyDeletedItem: ParentModel
@@ -41,9 +47,11 @@ class ParentAdapter(private var activity:Activity, private var parents: MutableL
 
     }
 
+
+
     override fun onCreateViewHolder(
-            parent: ViewGroup,
-            viewType: Int
+        parent: ViewGroup,
+        viewType: Int
     ): ViewHolder {
         val v = LayoutInflater.from(parent.context)
             .inflate(R.layout.parent_recycler, parent, false)
@@ -54,21 +62,27 @@ class ParentAdapter(private var activity:Activity, private var parents: MutableL
         parents =order
         notifyDataSetChanged()
     }
+    fun notifyChanged(position: Int, orderStatusId: Int){
+        parents[position].orderStatusId = orderStatusId
+        notifyItemChanged(position)
+    }
 
     fun addOrder(order: ParentModel){
         parents.add(order)
-        notifyDataSetChanged()
+        //notifyDataSetChanged()
+        notifyItemInserted(parents.size - 1)
     }
     fun removeAndAdd(order:ParentModel){
 
     }
 
 
-
     fun removeAt(position: Int) {
         mRecentlyDeletedItem  = parents.removeAt(position)
         mRecentlyDeletedItemPosition = position
         notifyItemRemoved(position)
+
+
     }
 
     override fun getItemCount(): Int {
@@ -78,8 +92,8 @@ class ParentAdapter(private var activity:Activity, private var parents: MutableL
 
     @SuppressLint("WrongConstant")
     override fun onBindViewHolder(
-            holder: ViewHolder,
-            position: Int
+        holder: ViewHolder,
+        position: Int
     ) {
         val parent = parents[position]
 
@@ -124,11 +138,11 @@ class ParentAdapter(private var activity:Activity, private var parents: MutableL
         try {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-           /* val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            val currentDateandTime = sdf.format(Date())
-            val event_date: Date = dateFormat.parse(parent.KDSOrderDate)
-            var  current_date = dateFormat.parse(currentDateandTime)
-            val diff: Long = current_date.getTime() - event_date.getTime()*/
+            /* val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+             val currentDateandTime = sdf.format(Date())
+             val event_date: Date = dateFormat.parse(parent.KDSOrderDate)
+             var  current_date = dateFormat.parse(currentDateandTime)
+             val diff: Long = current_date.getTime() - event_date.getTime()*/
 
             val startDateTime = dateFormat.parse(parent.KDSOrderDate)
             val currentDateandTime = dateFormat.format(Date())
@@ -153,8 +167,8 @@ class ParentAdapter(private var activity:Activity, private var parents: MutableL
                     + elapsedMinutes * 60 * 1000
                     + elapsedSeconds * 1000)).toInt()
 
-          /*  holder.timeText.base =diff
-            holder.timeText.start()*/
+            /*  holder.timeText.base =diff
+              holder.timeText.start()*/
 
             holder.timeText.setBase(SystemClock.elapsedRealtime() - elapsedTimeMilliseconds);
             holder.timeText.start();
@@ -167,38 +181,45 @@ class ParentAdapter(private var activity:Activity, private var parents: MutableL
 
 
         val childLayoutManager = LinearLayoutManager(
-                holder.recyclerView.context,
-                LinearLayout.VERTICAL,
-                false
+            holder.recyclerView.context,
+            LinearLayout.VERTICAL,
+            false
         )
         childLayoutManager.initialPrefetchItemCount = 4
-
 
 
         var adapter = ExampleAdapter(parent.diningOptionName, parent.qNo, parent.orderStatusId,parent.TodaysOrderNo, object : OnButtonClicked{
             override fun onPreparingClicked() {
                 holder.card_view.setBackgroundResource(R.drawable.card_view_border_preparing);
-                mListener!!.onPreparingClicked( parent.receiptNo, parent.localUniqueId!!)
+                mListener!!.onPreparingClicked( parent.receiptNo, parent.localUniqueId,holder.layoutPosition)
 
             }
             override fun onCompletedClicked() {
 
-                mListener!!.onCompletedClicked(parent.receiptNo, parent.localUniqueId!!, position, parent.OrderRefNo,holder.timeText.text.toString())
+                mListener!!.onCompletedClicked(parent.receiptNo,
+                    parent.localUniqueId, holder.layoutPosition, parent.TodaysOrderNo,holder.timeText.text.toString())
             }
 
             override fun onRecallClicked() {
                 if(parent.TodaysOrderNo!=null)
-                    mListener!!.onRecallClicked(parent.receiptNo,parent.localUniqueId!!)
-               /* else
-                    mListener!!.onRecallClicked(parent.receiptNo,"")*/
+                    mListener!!.onRecallClicked(parent.receiptNo, parent.localUniqueId)
+                /* else
+                     mListener!!.onRecallClicked(parent.receiptNo,"")*/
             }
 
-            override fun onChildItemClicked(orderNo: String, itemId: Long, flag: Boolean) {
-                mListener!!.onChildItemClicked(orderNo,itemId, flag)
+            override fun onChildItemClicked(parentModelId: Int, itemId: Long, flag: Boolean) {
+                mListener!!.onChildItemClicked(parentModelId,itemId, flag)
             }
 
         })
-        adapter.data = parent.children
+
+        /*if(parent.children!=null)
+            adapter.data = parent.children!!*/
+
+
+        holder.recyclerView.adapter = adapter
+        getChildrens(_context,parent.Id, adapter)
+
         holder.recyclerView.apply {
             layoutManager = childLayoutManager
             //adapter = ChildAdapter(parent.children)
@@ -212,12 +233,24 @@ class ParentAdapter(private var activity:Activity, private var parents: MutableL
         }
 
 
-        holder.recyclerView.adapter = adapter
-        //adapter.data = parent.children
-        adapter.notifyDataSetChanged()
+        //adapter.notifyDataSetChanged()
 
     }
 
+    val executor = Executors.newSingleThreadExecutor()
+    val handler = Handler(Looper.getMainLooper())
+
+    fun getChildrens(_context: Context, parentModelId:Int, adapter:ExampleAdapter) {
+        val db = AppDatabase.getAppDataBase(_context)!!
+        val ordersDao = db.ordersDao()
+        executor.execute {
+            var chiliders = ordersDao.getChildrens(parentModelId)
+            handler.post {
+                adapter.data = chiliders
+                adapter.notifyDataSetChanged()
+            }
+        }
+    }
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
         val recyclerView : RecyclerView =  itemView.findViewById(R.id.rv_child)

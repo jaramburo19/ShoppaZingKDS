@@ -48,7 +48,7 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
         return try {
 
             if(hasActiveInternetConnection(appContext)){
-                PostStatusUpdate()
+                //PostStatusUpdate()
                 Result.success()
             }
             else
@@ -134,7 +134,7 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
 
     fun PostStatusUpdate(){
 
-        var toUpdate = ShoppingCart.getOrders().filter { it-> it.orderStatusId!=2 && it.OrderTypeId!= ORDER_TYPES_WALKIN && !it.IsSynced && it.TodaysOrderNo !=null }
+        /*var toUpdate = ShoppingCart.getOrders().filter { it-> it.orderStatusId!=2 && it.OrderTypeId!= ORDER_TYPES_WALKIN && !it.IsSynced && it.TodaysOrderNo !=null }
 
         for (s in toUpdate){
             PostConfirmOrderAsync(
@@ -144,7 +144,7 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
             )
 
 
-        }
+        }*/
     }
 
 
@@ -173,7 +173,7 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
     }
 */
 
-    fun PostConfirmOrderAsync(model: UpdateOrderRequest){
+    fun PostConfirmOrderAsync(model: UpdateOrderRequest,_context:Context){
         try{
 
             var requestResponse: UpdateOrderResponse? =null
@@ -185,7 +185,7 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
 
             requestResponse = response.body()
             if(requestResponse!!.status==200)
-                ShoppingCart.updateSyncStatus(true,model.TodaysOrderNo)
+                ShoppingCart.updateSyncStatus(true,model.TodaysOrderNo,_context)
 
         }
         catch (ex: Exception) {

@@ -4,5 +4,5 @@ interface OnButtonClicked {
     fun onPreparingClicked()
     fun onCompletedClicked()
     fun onRecallClicked()
-    fun onChildItemClicked(orderNo: String, itemId: Long, flag: Boolean)
+    fun onChildItemClicked(parentModelId: Int, itemId: Long, flag: Boolean)
 }

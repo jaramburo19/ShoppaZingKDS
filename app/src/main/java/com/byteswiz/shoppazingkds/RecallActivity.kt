@@ -2,6 +2,8 @@ package com.byteswiz.shoppazingkds
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
@@ -14,6 +16,7 @@ import com.byteswiz.shoppazingkds.databinding.ActivityRecallBinding
 import com.byteswiz.shoppazingkds.interfaces.OnParentButtonClicked
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_STATUS_PREPARING
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_STATUS_READY
+import java.util.concurrent.Executors
 
 class RecallActivity : AppCompatActivity() {
     lateinit var _adapter: ParentAdapter
@@ -26,28 +29,37 @@ class RecallActivity : AppCompatActivity() {
         setContentView(binding.root)
         setupToolBar("Recall order")
 
-        _adapter = ParentAdapter(this, ShoppingCart.getOrders(), object : OnParentButtonClicked {
-            override fun onPreparingClicked(receiptNo: String, localUniqueId: String) {
-
-            }
-
-            override fun onCompletedClicked(receiptNo: String, localUniqueId: String, position: Int, orderRefNo:String, textDuration:String) {
-
-            }
-
-            override fun onRecallClicked(receiptNo: String, localUniqueId: String) {
-                ShoppingCart.updateStatus(ORDER_STATUS_PREPARING,localUniqueId)
-                finish()
-                //Toast.makeText(this@RecallActivity,"Recall Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
-            }
-
-            override fun onChildItemClicked(localUniqueId: String, itemId: Long, flag:Boolean) {
-                ShoppingCart.updateChildItemStatus(localUniqueId,itemId,flag)
-            }
-
-        })
-
         initRecycler()
+    }
+
+
+    val executor = Executors.newSingleThreadExecutor()
+    val handler = Handler(Looper.getMainLooper())
+
+    fun updateOrderStatusExecute(localUniqueId:String){
+
+        executor.execute {
+            ShoppingCart.updateStatus(ORDER_STATUS_PREPARING,localUniqueId, this@RecallActivity)
+
+            handler.post {
+                finish()
+            }
+        }
+
+
+    }
+
+    fun updateChildOrderStatusExecute(parentModelId:Int,itemId: Long, flag:Boolean){
+
+        executor.execute {
+
+            ShoppingCart.updateChildItemStatus(parentModelId,itemId,flag,this@RecallActivity)
+            handler.post {
+                finish()
+            }
+        }
+
+
     }
 
     private fun setupToolBar(title: String) {
@@ -71,34 +83,67 @@ class RecallActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    fun refreshOrders(){
+
+
+        executor.execute {
+            val doneOrders =ShoppingCart.getReadyOrders(this)
+            _adapter = ParentAdapter(this, this, doneOrders, object : OnParentButtonClicked {
+                override fun onPreparingClicked(
+                    receiptNo: String,
+                    localUniqueId: String,
+                    position: Int
+                ) {
+
+                }
+
+                override fun onCompletedClicked(receiptNo: String, localUniqueId: String, position: Int, orderRefNo:String, textDuration:String) {
+
+                }
+
+                override fun onRecallClicked(receiptNo: String, localUniqueId: String) {
+                    updateOrderStatusExecute(localUniqueId)
+                    //Toast.makeText(this@RecallActivity,"Recall Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onChildItemClicked(parentModelId: Int, itemId: Long, flag: Boolean) {
+                    updateChildOrderStatusExecute(parentModelId,itemId,flag)
+                }
+
+            })
+
+            handler.post {
+                if(doneOrders.isNotEmpty()){
+                    binding.recyclerView.visibility=View.VISIBLE
+                    binding.nodata.root.visibility=View.GONE
+
+
+                    _adapter.setOrders(doneOrders
+                        .sortedByDescending { it.TodaysOrderNo }
+                        .toMutableList())
+                    //recyclerView = findViewById(R.id.rv_parent)
+
+                    binding.recyclerView.apply {
+                        layoutManager = LinearLayoutManager(this@RecallActivity, LinearLayoutManager.HORIZONTAL,false)
+                        //adapter = _adapter
+                    }
+                    binding.recyclerView.adapter = _adapter
+                    _adapter.notifyDataSetChanged()
+                }
+                else{
+                    binding.recyclerView.visibility=View.GONE
+                    binding.nodata.txtNoDataDesc.text="There is no orders to recall \n yet  right now."
+                    binding.nodata.root.visibility=View.VISIBLE
+                }
+
+
+            }
+        }
+    }
+
     private fun initRecycler(){
 
-
-
-        var doneOrders = ShoppingCart.getOrders()
-            .filter { it->it.TodaysOrderNo!=null && it.orderStatusId== ORDER_STATUS_READY }
-        if(doneOrders.isNotEmpty()){
-            binding.recyclerView.visibility=View.VISIBLE
-            binding.nodata.root.visibility=View.GONE
-
-
-            _adapter.setOrders(doneOrders
-                .sortedByDescending { it.TodaysOrderNo }
-                .toMutableList())
-            //recyclerView = findViewById(R.id.rv_parent)
-
-            binding.recyclerView.apply {
-                layoutManager = LinearLayoutManager(this@RecallActivity, LinearLayoutManager.HORIZONTAL,false)
-                //adapter = _adapter
-            }
-            binding.recyclerView.adapter = _adapter
-            _adapter.notifyDataSetChanged()
-        }
-        else{
-            binding.recyclerView.visibility=View.GONE
-            binding.nodata.txtNoDataDesc.text="There is no orders to recall \n yet  right now."
-            binding.nodata.root.visibility=View.VISIBLE
-        }
+        refreshOrders()
 
     }
 }

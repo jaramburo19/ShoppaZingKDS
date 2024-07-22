@@ -8,6 +8,8 @@ import android.media.MediaPlayer
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -42,6 +44,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
 
 
@@ -160,36 +163,7 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-        var currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
-
-        _adapter = ParentAdapter(this,currentOrders, object : OnParentButtonClicked {
-            override fun onPreparingClicked(receiptNo: String, localUniqueId: String) {
-                //Toast.makeText(this@MainActivity,"Preparing Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
-                //val currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
-                ShoppingCart.updateStatus(ORDER_STATUS_PREPARING, localUniqueId)
-                                //_adapter.notifyDataSetChanged()
-                val currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
-                _adapter.setOrders(currentOrders)
-                stopSound()
-                ShowHideNodata(currentOrders)
-            }
-
-            override fun onCompletedClicked(receiptNo: String, localUniqueId: String, position: Int, orderRefNo:String, textDuration:String) {
-                ConfirmComplete(receiptNo,localUniqueId,position,orderRefNo,textDuration)
-
-                //Toast.makeText(this@MainActivity,"Completed Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
-            }
-
-            override fun onRecallClicked(receiptNo: String, localUniqueId: String) {
-
-            }
-
-            override fun onChildItemClicked(orderNo: String, itemId: Long, flag:Boolean) {
-                ShoppingCart.updateChildItemStatus(orderNo,itemId,flag)
-            }
-
-
-        })
+        setupAdapters()
 
         /*viewModel = ViewModelProvider(this).get(CartViewModel::class.java)
         viewModel.ItemsMutableLiveData.value = ShoppingCart.getOrders()
@@ -210,24 +184,150 @@ class MainActivity : AppCompatActivity() {
 
 
     }
+
+    val executor = Executors.newSingleThreadExecutor()
+    val handler = Handler(Looper.getMainLooper())
+
+    fun setupAdapters(){
+
+        executor.execute {
+            var currentOrders =ShoppingCart.getOrders(this@MainActivity)
+
+            handler.post {
+                _adapter = ParentAdapter(this,this,currentOrders, object : OnParentButtonClicked {
+                    override fun onPreparingClicked(
+                        receiptNo: String,
+                        localUniqueId: String,
+                        position: Int
+                    ) {
+                        //Toast.makeText(this@MainActivity,"Preparing Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
+                        //val currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
+                        updateOrderStatusExecute(localUniqueId,ORDER_STATUS_PREPARING,position)
+
+                        //ShoppingCart.updateStatus(ORDER_STATUS_PREPARING, localUniqueId,this@MainActivity)
+                        //_adapter.notifyDataSetChanged()
+                        stopSound()
+
+                    }
+
+                    override fun onCompletedClicked(receiptNo: String, localUniqueId: String, position: Int, orderRefNo:String, textDuration:String) {
+                        ConfirmComplete(receiptNo,localUniqueId,position,orderRefNo,textDuration)
+
+                        //Toast.makeText(this@MainActivity,"Completed Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
+                    }
+
+                    override fun onRecallClicked(receiptNo: String, localUniqueId: String) {
+
+                    }
+
+                    override fun onChildItemClicked(
+                        parentModelId: Int,
+                        itemId: Long,
+                        flag: Boolean
+                    ) {
+                        updateChildOrderStatusExecute(parentModelId,itemId,flag)
+                    }
+
+
+                })
+            }
+        }
+    }
+
+    fun updateChildOrderStatusExecute(parentModelId:Int,itemId: Long, flag:Boolean){
+
+        executor.execute {
+
+            ShoppingCart.updateChildItemStatus(parentModelId,itemId,flag, this@MainActivity)
+            handler.post {
+                //finish()
+            }
+        }
+
+
+    }
+
+
+    fun refreshOrders(){
+
+
+        executor.execute {
+            val currentOrders =ShoppingCart.getOrders(this)
+
+            handler.post {
+                _adapter.setOrders(currentOrders)
+                _adapter.notifyDataSetChanged()
+
+                if(isInitialLoad){
+                    isInitialLoad=false
+                    binding.recyclerView.adapter = _adapter
+                }
+
+
+                ShowHideNodata(currentOrders)
+
+            }
+        }
+    }
+    fun updateOrderStatusExecute(localUniqueId:String, orderStatusId: Int, position:Int){
+        if(orderStatusId== ORDER_STATUS_PREPARING)
+            _adapter.notifyChanged(position, orderStatusId)
+        else if(orderStatusId== ORDER_STATUS_READY)
+            _adapter.removeAt(position)
+
+        executor.execute {
+
+            ShoppingCart.updateStatus(orderStatusId,localUniqueId, this@MainActivity)
+            val currentOrders =ShoppingCart.getOrders(this@MainActivity)
+
+            handler.post {
+
+
+                //_adapter.setOrders(currentOrders)
+                stopSound()
+                ShowHideNodata(currentOrders)
+            }
+        }
+
+
+    }
+
+    fun updateSyncStatusExecute(localUniqueId:String, isSynced: Boolean){
+
+        executor.execute {
+            ShoppingCart.updateSyncStatus(false, localUniqueId,this@MainActivity)
+
+            handler.post {
+
+            }
+        }
+    }
+
+    fun sendtoCounterCompleteExecute(localUniqueId: String, textDuration:String){
+        executor.execute {
+            var orderItem = ShoppingCart.getOrderByLocalUID(localUniqueId,this)
+            handler.post {
+                ThreadKDSComplete = Thread(threadSendToCounterComplete(orderItem!!, ORDER_STATUS_READY, textDuration))
+                ThreadKDSComplete!!.start()
+            }
+        }
+    }
+
     fun ConfirmComplete(receiptNo: String, localUniqueId: String, position: Int, orderRefNo:String, textDuration:String){
         val builder = android.app.AlertDialog.Builder(this)
-        builder.setTitle("Are you sure this order is complete?")
+        builder.setTitle("Are you sure this order is complete? Order #:$orderRefNo")
         //builder.setIcon(R.drawable.shoppazing_logo)
         builder.setPositiveButton("Complete", DialogInterface.OnClickListener { dialog, id ->
             dialog.dismiss()
-            ShoppingCart.updateStatus(ORDER_STATUS_READY, localUniqueId)
-            ShoppingCart.updateSyncStatus(false, localUniqueId)
+            updateOrderStatusExecute(localUniqueId,ORDER_STATUS_READY,position)
+            //ShoppingCart.updateStatus(ORDER_STATUS_READY, localUniqueId,this)
+            updateSyncStatusExecute(localUniqueId,false)
 
-            val currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
-
-            _adapter.setOrders(currentOrders)
+            //refreshOrders()
             stopSound()
 
-            var orderItem = ShoppingCart.getOrderByOrderRefNo(localUniqueId,orderRefNo)
-            ThreadKDSComplete = Thread(threadSendToCounterComplete(orderItem!!, ORDER_STATUS_READY, textDuration))
-            ThreadKDSComplete!!.start()
-            ShowHideNodata(currentOrders)
+            sendtoCounterCompleteExecute(localUniqueId, textDuration)
+
         })
         builder.setNegativeButton(
             "Cancel",
@@ -280,11 +380,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        var currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
+
+        refreshOrders()
+
+/*        var currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
         ShowHideNodata(currentOrders)
 
         _adapter.setOrders(currentOrders)
-        _adapter.notifyDataSetChanged()
+        _adapter.notifyDataSetChanged()*/
 
     }
 
@@ -310,26 +413,36 @@ class MainActivity : AppCompatActivity() {
          }
      }*/
 
+    var isInitialLoad = true
     private fun initRecycler(){
-        _adapter.setOrders(ShoppingCart.getOrders().filter { it -> it.orderStatusId != 4 }.toMutableList())
+        //_adapter.setOrders(ShoppingCart.getOrders().filter { it -> it.orderStatusId != 4 }.toMutableList())
         //binding.recyclerView = findViewById(R.id.rv_parent)
-
+        refreshOrders()
+        //binding.recyclerView.adapter = _adapter
         binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
             //adapter = _adapter
         }
-        binding.recyclerView.adapter = _adapter
-        _adapter.notifyDataSetChanged()
+
     }
 
-    fun addNewOrder(order: ParentModel){
-        ShoppingCart.addOrder(order)
+    fun addNewOrderExecute(order:ParentModel){
 
-        _adapter.addOrder(order)
-        makeStatusNotification("New order arrived", this@MainActivity, "Alert!")
-        makeSound(this@MainActivity)
-        binding.recyclerView.visibility= View.VISIBLE
-        binding.nodata.root.visibility=View.GONE
+
+    }
+    fun addNewOrder(order: ParentModel){
+        executor.execute {
+            var newOrder = ShoppingCart.addOrder(order,this)
+            var parentModel = ShoppingCart.getOrderById(this , newOrder.toInt())
+            handler.post {
+                _adapter.addOrder(parentModel)
+                makeStatusNotification("New order arrived", this@MainActivity, "Alert!")
+                makeSound(this@MainActivity)
+                binding.recyclerView.visibility= View.VISIBLE
+                binding.nodata.root.visibility=View.GONE
+            }
+
+        }
         //viewModel.ItemsMutableLiveData.value = getOrders()
     }
 

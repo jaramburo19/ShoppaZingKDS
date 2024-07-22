@@ -156,7 +156,7 @@ class ExampleAdapter(var diningOptionName: String,
                        imgCheck.visibility=View.GONE
                     }
 
-                    listener!!.onChildItemClicked(orderNo, item.itemId!!,IsTicked)
+                    listener!!.onChildItemClicked(item.ParentModelId!!.toInt(), item.itemId!!,IsTicked)
                 }
 
                 if(!item.SpecialInstructions.isNullOrEmpty()){

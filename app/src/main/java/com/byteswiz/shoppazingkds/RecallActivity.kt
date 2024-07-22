@@ -29,6 +29,8 @@ class RecallActivity : AppCompatActivity() {
         setContentView(binding.root)
         setupToolBar("Recall order")
 
+        Toast.makeText(this,"Showing last 50 orders only",Toast.LENGTH_LONG).show()
+
         initRecycler()
     }
 
@@ -55,7 +57,7 @@ class RecallActivity : AppCompatActivity() {
 
             ShoppingCart.updateChildItemStatus(parentModelId,itemId,flag,this@RecallActivity)
             handler.post {
-                finish()
+                //finish()
             }
         }
 
@@ -119,8 +121,9 @@ class RecallActivity : AppCompatActivity() {
 
 
                     _adapter.setOrders(doneOrders
-                        .sortedByDescending { it.TodaysOrderNo }
-                        .toMutableList())
+                        /*.sortedByDescending { it.Id }
+                        .toMutableList()*/
+                    )
                     //recyclerView = findViewById(R.id.rv_parent)
 
                     binding.recyclerView.apply {
@@ -128,7 +131,7 @@ class RecallActivity : AppCompatActivity() {
                         //adapter = _adapter
                     }
                     binding.recyclerView.adapter = _adapter
-                    _adapter.notifyDataSetChanged()
+                    //_adapter.notifyDataSetChanged()
                 }
                 else{
                     binding.recyclerView.visibility=View.GONE

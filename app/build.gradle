@@ -4,11 +4,11 @@ plugins {
 }
 apply plugin: 'kotlin-kapt'
 android {
-    compileSdkVersion 34
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.byteswiz.shoppazingkds"
-        minSdkVersion 21
+        minSdkVersion 23
         targetSdkVersion 34
         versionCode 9
         versionName "1.0.009"

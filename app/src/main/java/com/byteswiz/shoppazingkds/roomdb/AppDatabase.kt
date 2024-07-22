@@ -13,8 +13,14 @@ import com.byteswiz.shoppazingkds.dao.OrdersDao
 @Database(entities = [
     ParentModel::class,
     KDSCartItem::class
-                     ]
-    ,version = 1,
+                     ],
+    autoMigrations = [
+        AutoMigration (
+            from = 1,
+            to = 2
+        )
+        ]
+    ,version = 2,
     exportSchema = true)
 @TypeConverters(DataConverters:: class)
 abstract class AppDatabase: RoomDatabase() {

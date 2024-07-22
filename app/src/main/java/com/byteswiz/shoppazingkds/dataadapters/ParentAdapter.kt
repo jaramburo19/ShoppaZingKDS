@@ -25,6 +25,7 @@ import com.byteswiz.shoppazingkds.interfaces.OnButtonClicked
 import com.byteswiz.shoppazingkds.interfaces.OnParentButtonClicked
 import com.byteswiz.shoppazingkds.kds_timers.CountUpTimer
 import com.byteswiz.shoppazingkds.roomdb.AppDatabase
+import com.byteswiz.shoppazingkds.utils.Constants.ORDER_STATUS_PREPARING
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_TYPES_ONLINE_DELIVERY
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_TYPES_ONLINE_PICKUP
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_TYPES_WALKIN
@@ -37,7 +38,7 @@ import java.util.concurrent.TimeUnit
 class ParentAdapter(var context: Context, private var activity:Activity, private var parents: MutableList<ParentModel>, listener: OnParentButtonClicked) :    RecyclerView.Adapter<ParentAdapter.ViewHolder>(){
     private val viewPool = RecyclerView.RecycledViewPool()
     private val _activity = activity
-    private  val _context = context
+    private val _context = context
 
     private var mListener: OnParentButtonClicked? = null
     private lateinit var mRecentlyDeletedItem: ParentModel
@@ -95,6 +96,7 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
         holder: ViewHolder,
         position: Int
     ) {
+
         val parent = parents[position]
 
         if(parent.OrderTypeId== ORDER_TYPES_WALKIN)
@@ -134,6 +136,9 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
             }
         }
 
+
+       /* if(parent.orderStatusId== ORDER_STATUS_PREPARING)
+            return*/
 
         try {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -218,6 +223,7 @@ class ParentAdapter(var context: Context, private var activity:Activity, private
 
 
         holder.recyclerView.adapter = adapter
+
         getChildrens(_context,parent.Id, adapter)
 
         holder.recyclerView.apply {

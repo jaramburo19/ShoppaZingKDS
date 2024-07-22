@@ -28,7 +28,7 @@ interface OrdersDao {
     @Query("SELECT * FROM Orders where orderStatusId <> 4")
     fun getNotReadyOrders():MutableList<ParentModel>
 
-    @Query("SELECT * FROM Orders where orderStatusId == 4")
+    @Query("SELECT * FROM Orders where orderStatusId == 4 ORDER BY Id DESC LIMIT 50")
     fun getReadyOrders():MutableList<ParentModel>
 
     @Query("SELECT * FROM Orders where localUniqueId =:uid")

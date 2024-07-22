@@ -1,0 +1,225 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "4ccd63cb8d3d896f3852c8a1a90bde20",
+    "entities": [
+      {
+        "tableName": "Orders",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`Id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `OrderTypeId` INTEGER NOT NULL, `OrderRefNo` TEXT NOT NULL, `children` TEXT, `KDSOrderDate` TEXT NOT NULL, `diningOptionName` TEXT NOT NULL, `ticketName` TEXT, `receiptNo` TEXT NOT NULL, `qrcode` TEXT NOT NULL, `orderStatusId` INTEGER NOT NULL, `IsSynced` INTEGER NOT NULL, `qNo` TEXT, `TodaysOrderNo` TEXT NOT NULL, `IsCompleted` INTEGER, `ticketGuidId` TEXT, `localUniqueId` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "Id",
+            "columnName": "Id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "OrderTypeId",
+            "columnName": "OrderTypeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "OrderRefNo",
+            "columnName": "OrderRefNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "children",
+            "columnName": "children",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "KDSOrderDate",
+            "columnName": "KDSOrderDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diningOptionName",
+            "columnName": "diningOptionName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ticketName",
+            "columnName": "ticketName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "receiptNo",
+            "columnName": "receiptNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "qrcode",
+            "columnName": "qrcode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "orderStatusId",
+            "columnName": "orderStatusId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "IsSynced",
+            "columnName": "IsSynced",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "qNo",
+            "columnName": "qNo",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "TodaysOrderNo",
+            "columnName": "TodaysOrderNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "IsCompleted",
+            "columnName": "IsCompleted",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "ticketGuidId",
+            "columnName": "ticketGuidId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "localUniqueId",
+            "columnName": "localUniqueId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "Id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_Orders_Id",
+            "unique": false,
+            "columnNames": [
+              "Id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_Orders_Id` ON `${TABLE_NAME}` (`Id`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "CartItems",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`Id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `itemId` INTEGER, `CombiName` TEXT NOT NULL, `quantity` REAL NOT NULL, `modifiers` TEXT, `SpecialInstructions` TEXT, `IfNotAvailable` INTEGER, `IsDone` INTEGER, `ParentModelId` INTEGER, FOREIGN KEY(`ParentModelId`) REFERENCES `Orders`(`Id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "Id",
+            "columnName": "Id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "CombiName",
+            "columnName": "CombiName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantity",
+            "columnName": "quantity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modifiers",
+            "columnName": "modifiers",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "SpecialInstructions",
+            "columnName": "SpecialInstructions",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "IfNotAvailable",
+            "columnName": "IfNotAvailable",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "IsDone",
+            "columnName": "IsDone",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "ParentModelId",
+            "columnName": "ParentModelId",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "Id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_CartItems_Id_ParentModelId",
+            "unique": false,
+            "columnNames": [
+              "Id",
+              "ParentModelId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_CartItems_Id_ParentModelId` ON `${TABLE_NAME}` (`Id`, `ParentModelId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "Orders",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "ParentModelId"
+            ],
+            "referencedColumns": [
+              "Id"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4ccd63cb8d3d896f3852c8a1a90bde20')"
+    ]
+  }
+}

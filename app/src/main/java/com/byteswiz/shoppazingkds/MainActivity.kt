@@ -326,7 +326,7 @@ class MainActivity : AppCompatActivity() {
             //refreshOrders()
             stopSound()
 
-            sendtoCounterCompleteExecute(localUniqueId, textDuration)
+            //sendtoCounterCompleteExecute(localUniqueId, textDuration)
 
         })
         builder.setNegativeButton(

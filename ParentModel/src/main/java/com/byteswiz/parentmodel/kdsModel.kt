@@ -72,7 +72,7 @@ data class ParentModel (
             childColumns = ["ParentModelId"]
             //,  onDelete = ForeignKey.CASCADE
         )],
-    indices = [Index(value = ["Id"])])
+    indices = [Index(value = ["Id","ParentModelId"])])
 data class KDSCartItem(
 
     @SerializedName("Id")

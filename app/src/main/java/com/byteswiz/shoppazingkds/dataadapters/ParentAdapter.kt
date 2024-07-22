@@ -1,6 +1,7 @@
 package com.byteswiz.shoppazingkds.dataadapters
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.os.CountDownTimer
 import android.os.SystemClock
 import android.view.LayoutInflater
@@ -10,6 +11,8 @@ import android.widget.Chronometer
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.DividerItemDecoration.*
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.byteswiz.parentmodel.ParentModel
@@ -26,8 +29,9 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 
-class ParentAdapter(private var parents: MutableList<ParentModel>, listener: OnParentButtonClicked) :    RecyclerView.Adapter<ParentAdapter.ViewHolder>(){
+class ParentAdapter(private var activity:Activity, private var parents: MutableList<ParentModel>, listener: OnParentButtonClicked) :    RecyclerView.Adapter<ParentAdapter.ViewHolder>(){
     private val viewPool = RecyclerView.RecycledViewPool()
+    private val _activity = activity
 
     private var mListener: OnParentButtonClicked? = null
     private lateinit var mRecentlyDeletedItem: ParentModel
@@ -54,8 +58,12 @@ class ParentAdapter(private var parents: MutableList<ParentModel>, listener: OnP
     fun addOrder(order: ParentModel){
         parents.add(order)
         notifyDataSetChanged()
+    }
+    fun removeAndAdd(order:ParentModel){
 
     }
+
+
 
     fun removeAt(position: Int) {
         mRecentlyDeletedItem  = parents.removeAt(position)
@@ -152,6 +160,7 @@ class ParentAdapter(private var parents: MutableList<ParentModel>, listener: OnP
             holder.timeText.start();
 
 
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -164,19 +173,22 @@ class ParentAdapter(private var parents: MutableList<ParentModel>, listener: OnP
         )
         childLayoutManager.initialPrefetchItemCount = 4
 
+
+
         var adapter = ExampleAdapter(parent.diningOptionName, parent.qNo, parent.orderStatusId,parent.TodaysOrderNo, object : OnButtonClicked{
             override fun onPreparingClicked() {
                 holder.card_view.setBackgroundResource(R.drawable.card_view_border_preparing);
-                mListener!!.onPreparingClicked( parent.receiptNo, parent.TodaysOrderNo)
+                mListener!!.onPreparingClicked( parent.receiptNo, parent.localUniqueId!!)
 
             }
             override fun onCompletedClicked() {
-                mListener!!.onCompletedClicked(parent.receiptNo, parent.TodaysOrderNo, position)
+
+                mListener!!.onCompletedClicked(parent.receiptNo, parent.localUniqueId!!, position, parent.OrderRefNo,holder.timeText.text.toString())
             }
 
             override fun onRecallClicked() {
                 if(parent.TodaysOrderNo!=null)
-                    mListener!!.onRecallClicked(parent.receiptNo,parent.TodaysOrderNo)
+                    mListener!!.onRecallClicked(parent.receiptNo,parent.localUniqueId!!)
                /* else
                     mListener!!.onRecallClicked(parent.receiptNo,"")*/
             }
@@ -193,6 +205,12 @@ class ParentAdapter(private var parents: MutableList<ParentModel>, listener: OnP
             //adapter = adapter
             setRecycledViewPool(viewPool)
         }
+
+        if (holder.recyclerView.itemDecorationCount == 0) {
+            val itemDecorator = DividerItemDecoration(_activity, VERTICAL)
+            holder.recyclerView.addItemDecoration(itemDecorator)
+        }
+
 
         holder.recyclerView.adapter = adapter
         //adapter.data = parent.children

@@ -46,36 +46,9 @@
                     android:layout_height="wrap_content"
                     android:text="product"
                     android:layout_marginRight="10dp"/>
-
                 <TextView
+                    app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/product_name"
-                    app:layout_constraintStart_toStartOf="parent"
-                    android:id="@+id/modifiers"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:text="Fillers"
-                    android:visibility="visible">
-
-                </TextView>
-
-
-                <TextView
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/modifiers"
-                    android:id="@+id/txtSpecialInstructions"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:text="No Mayo"
-                    android:textStyle="bold"
-                    android:textColor="@color/purple_500"
-                    android:visibility="visible">
-
-                </TextView>
-                <TextView
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/txtSpecialInstructions"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="x0"
@@ -86,6 +59,37 @@
                     android:id="@+id/product_quantity">
 
                 </TextView>
+
+                <TextView
+                    app:layout_constraintTop_toBottomOf="@+id/product_quantity"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    android:id="@+id/modifiers"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="Fillers"
+                    android:textColor="@color/black"
+                    android:visibility="visible">
+
+                </TextView>
+
+
+                <TextView
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/modifiers"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    android:id="@+id/txtSpecialInstructions"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:text="No Mayo"
+                    android:textStyle="bold"
+                    android:textColor="@color/purple_500"
+                    android:visibility="visible">
+
+                </TextView>
+
                 <ImageView
                     android:id="@+id/imgCheck"
                     android:layout_width="wrap_content"

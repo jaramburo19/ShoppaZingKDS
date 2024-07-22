@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+
+
+    <ImageView
+        app:layout_constraintBottom_toTopOf="@+id/txtNoDataTitle"
+        app:layout_constraintStart_toStartOf="@+id/txtNoDataTitle"
+        app:layout_constraintEnd_toEndOf="@+id/txtNoDataTitle"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginBottom="20dp"
+        android:src="@drawable/orderhistory80"
+        />
+    <TextView
+        android:id="@+id/txtNoDataTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="No Data Available"
+        android:textSize="28sp"
+        android:textStyle="bold"/>
+
+    <TextView
+        android:id="@+id/txtIPAddress"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txtNoDataTitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IP: 192.168.0.1"
+        android:textSize="24sp"
+        android:textStyle="bold"/>
+
+
+    <TextView
+        android:id="@+id/txtNoDataDesc"
+        app:layout_constraintTop_toBottomOf="@+id/txtIPAddress"
+        app:layout_constraintStart_toStartOf="@+id/txtNoDataTitle"
+        app:layout_constraintEnd_toEndOf="@+id/txtNoDataTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:textAlignment="center"
+        android:text="There is no orders to recall \n yet  right now."
+        android:gravity="center_horizontal" />
+
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -15,7 +15,10 @@ class UpdateOrderRequest(
     var ReceiptNo: String,
 
     @SerializedName("TodaysOrderNo")
-    var TodaysOrderNo: String
+    var TodaysOrderNo: String,
+
+    @SerializedName("IsManualDelivered")
+    var IsManualDelivered: Boolean
 
 )
 

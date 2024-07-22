@@ -39,8 +39,12 @@
             android:visibility="gone"/>
     </LinearLayout>
 
+    <include android:id="@+id/nodata"
+        android:visibility="gone"
+        layout="@layout/nodata_layout" />
+
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_parent"
+        android:id="@+id/recyclerView"
         app:layout_constraintTop_toBottomOf="@+id/lnrIP"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_width="match_parent"

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="Online">
+
+        <SwitchPreferenceCompat
+            app:key="ACCEPT_ONLINE_ORDERS"
+            app:title="Accept Online Orders"
+            android:summary="If this is enabled, online orders will also be posted to kitchen display."
+            android:defaultValue="false"
+            />
+
+        <SwitchPreferenceCompat
+            app:key="CONNECTIVITY"
+            app:title="Connectivity"
+            android:summary="If disabled, no orders will be posted in the kitchen display."
+            android:defaultValue="true"
+            />
+
+
+
+    </PreferenceCategory>
+
+
+</PreferenceScreen>

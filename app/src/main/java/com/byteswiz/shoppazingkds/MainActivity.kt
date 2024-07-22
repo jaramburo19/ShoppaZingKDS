@@ -1,26 +1,27 @@
 package com.byteswiz.shoppazingkds
 
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
 import android.media.MediaPlayer
-import android.media.Ringtone
-import android.media.RingtoneManager
-import android.net.Uri
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.byteswiz.parentmodel.CompleteOrderRequest
 import com.byteswiz.parentmodel.ParentModel
 import com.byteswiz.shoppazingkds.cart.ShoppingCart
 import com.byteswiz.shoppazingkds.dataadapters.ParentAdapter
+import com.byteswiz.shoppazingkds.databinding.ActivityMainBinding
 import com.byteswiz.shoppazingkds.interfaces.OnParentButtonClicked
 import com.byteswiz.shoppazingkds.livedata.CartViewModel
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_STATUS_PREPARING
@@ -35,6 +36,7 @@ import java.lang.Runnable
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketException
 import java.net.UnknownHostException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -44,7 +46,7 @@ import kotlin.coroutines.CoroutineContext
 
 
 class MainActivity : AppCompatActivity() {
-    lateinit var recyclerView: RecyclerView
+    //lateinit var recyclerView: RecyclerView
 
     var serverSocket: ServerSocket? = null
     var Thread1: Thread? = null
@@ -52,6 +54,10 @@ class MainActivity : AppCompatActivity() {
     var Thread3: Thread? = null
     var Thread4: Thread? = null
 
+    var IsKDSConnected: Boolean=false
+    //private var outputStreamKDS:OutputStream?=null
+    private var objectOutputStreamKDS:ObjectOutputStream?=null
+    var ThreadKDSComplete: Thread? = null
 
     var tvIP: TextView? = null
     var tvPort: TextView? = null
@@ -127,9 +133,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    lateinit var  binding: ActivityMainBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        //setContentView(R.layout.activity_main)
+        setContentView( binding.root)
+
         syncViewModel =SyncViewModel(application)
 
         jobPostStatus = startPostUpdateCoroutineSync()
@@ -142,6 +152,7 @@ class MainActivity : AppCompatActivity() {
         tvPort = findViewById(R.id.tvPort)
         tvConnectionStatus = findViewById(R.id.tvConnectionStatus)
 
+
         try {
             SERVER_IP = getLocalIpAddress()
         } catch (e: UnknownHostException) {
@@ -149,26 +160,27 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-        _adapter = ParentAdapter(ShoppingCart.getOrders(), object : OnParentButtonClicked {
-            override fun onPreparingClicked(receiptNo: String, todaysOrderNo: String) {
-                //Toast.makeText(this@MainActivity,"Preparing Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
+        var currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
 
-                ShoppingCart.updateStatus(ORDER_STATUS_PREPARING, todaysOrderNo)
-                ShoppingCart.updateSyncStatus(false, todaysOrderNo)
-                //_adapter.notifyDataSetChanged()
-                _adapter.setOrders(ShoppingCart.getOrders().filter { it.orderStatusId != 4 }.toMutableList())
+        _adapter = ParentAdapter(this,currentOrders, object : OnParentButtonClicked {
+            override fun onPreparingClicked(receiptNo: String, localUniqueId: String) {
+                //Toast.makeText(this@MainActivity,"Preparing Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
+                //val currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
+                ShoppingCart.updateStatus(ORDER_STATUS_PREPARING, localUniqueId)
+                                //_adapter.notifyDataSetChanged()
+                val currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
+                _adapter.setOrders(currentOrders)
                 stopSound()
+                ShowHideNodata(currentOrders)
             }
 
-            override fun onCompletedClicked(receiptNo: String, todaysOrderNo: String, position: Int) {
-                ShoppingCart.updateStatus(ORDER_STATUS_READY, todaysOrderNo)
-                ShoppingCart.updateSyncStatus(false, todaysOrderNo)
-                _adapter.setOrders(ShoppingCart.getOrders().filter { it.orderStatusId != 4 }.toMutableList())
-                stopSound()
+            override fun onCompletedClicked(receiptNo: String, localUniqueId: String, position: Int, orderRefNo:String, textDuration:String) {
+                ConfirmComplete(receiptNo,localUniqueId,position,orderRefNo,textDuration)
+
                 //Toast.makeText(this@MainActivity,"Completed Clicked: " + receiptNo + " " + qrcode, Toast.LENGTH_SHORT).show()
             }
 
-            override fun onRecallClicked(receiptNo: String, todaysOrderNo: String) {
+            override fun onRecallClicked(receiptNo: String, localUniqueId: String) {
 
             }
 
@@ -198,6 +210,32 @@ class MainActivity : AppCompatActivity() {
 
 
     }
+    fun ConfirmComplete(receiptNo: String, localUniqueId: String, position: Int, orderRefNo:String, textDuration:String){
+        val builder = android.app.AlertDialog.Builder(this)
+        builder.setTitle("Are you sure this order is complete?")
+        //builder.setIcon(R.drawable.shoppazing_logo)
+        builder.setPositiveButton("Complete", DialogInterface.OnClickListener { dialog, id ->
+            dialog.dismiss()
+            ShoppingCart.updateStatus(ORDER_STATUS_READY, localUniqueId)
+            ShoppingCart.updateSyncStatus(false, localUniqueId)
+
+            val currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
+
+            _adapter.setOrders(currentOrders)
+            stopSound()
+
+            var orderItem = ShoppingCart.getOrderByOrderRefNo(localUniqueId,orderRefNo)
+            ThreadKDSComplete = Thread(threadSendToCounterComplete(orderItem!!, ORDER_STATUS_READY, textDuration))
+            ThreadKDSComplete!!.start()
+            ShowHideNodata(currentOrders)
+        })
+        builder.setNegativeButton(
+            "Cancel",
+            DialogInterface.OnClickListener { dialog, id -> dialog.dismiss() })
+        val alert: android.app.AlertDialog = builder.create()
+        alert.show()
+    }
+
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         var view = menuInflater.inflate(R.menu.toolbar_menu, menu)
@@ -215,6 +253,9 @@ class MainActivity : AppCompatActivity() {
             R.id.action_recall -> {
                 ShowRecall()
             }
+            R.id.action_settings ->{
+                ShowSettings()
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -227,39 +268,68 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    override fun onResume() {
-        super.onResume()
-        _adapter.setOrders(ShoppingCart.getOrders().filter { it -> it.orderStatusId != 4 }.toMutableList())
-        _adapter.notifyDataSetChanged()
+    fun ShowSettings() {
+
+        val intent = Intent(this, SettingsActivity::class.java)
+        // intent.putExtra("EXTRA_ORDER_STATUS", order.OrderStatusId.toString())
+
+        startActivity(intent)
     }
 
 
+    override fun onResume() {
+        super.onResume()
 
+        var currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
+        ShowHideNodata(currentOrders)
 
-   /* private fun ordersObserver(): Observer<MutableList<ParentModel>?> {
-        return Observer { orders ->
-                //_adapter.setOrders(getOrders())
+        _adapter.setOrders(currentOrders)
+        _adapter.notifyDataSetChanged()
 
+    }
+
+    private fun ShowHideNodata(currentOrders: MutableList<ParentModel>) {
+        if (currentOrders.isNotEmpty()) {
+            binding.recyclerView.visibility = View.VISIBLE
+            binding.nodata.root.visibility = View.GONE
+
+        } else {
+            binding.nodata.txtNoDataTitle.text ="No Orders Available"
+            binding.nodata.txtNoDataDesc.text="There are no orders to process yet. If you haven't set this up yet, kindly configure ShoppaZing POS \n and set Kitchen Display IP address to this value: $SERVER_IP. \n" +
+                    "Once done, this device will start receiving Kitchen orders from ShoppaZing POS app."
+            binding.recyclerView.visibility = View.GONE
+            binding.nodata.root.visibility = View.VISIBLE
         }
-    }*/
+    }
+
+
+    /* private fun ordersObserver(): Observer<MutableList<ParentModel>?> {
+         return Observer { orders ->
+                 //_adapter.setOrders(getOrders())
+
+         }
+     }*/
 
     private fun initRecycler(){
         _adapter.setOrders(ShoppingCart.getOrders().filter { it -> it.orderStatusId != 4 }.toMutableList())
-        recyclerView = findViewById(R.id.rv_parent)
+        //binding.recyclerView = findViewById(R.id.rv_parent)
 
-        recyclerView.apply {
+        binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
             //adapter = _adapter
         }
-        recyclerView.adapter = _adapter
+        binding.recyclerView.adapter = _adapter
         _adapter.notifyDataSetChanged()
     }
 
     fun addNewOrder(order: ParentModel){
         ShoppingCart.addOrder(order)
+
         _adapter.addOrder(order)
         makeStatusNotification("New order arrived", this@MainActivity, "Alert!")
         makeSound(this@MainActivity)
+        binding.recyclerView.visibility= View.VISIBLE
+        binding.nodata.root.visibility=View.GONE
         //viewModel.ItemsMutableLiveData.value = getOrders()
     }
 
@@ -282,6 +352,7 @@ class MainActivity : AppCompatActivity() {
                     tvConnectionStatus.setTextColor(Color.RED)
                     tvIP!!.text = "IP: $SERVER_IP"
                     tvPort!!.text = "Port: $SERVER_PORT"
+                    binding.nodata.txtIPAddress.text ="IP: $SERVER_IP"
                 })
                 try {
                     socket = serverSocket!!.accept()
@@ -401,7 +472,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    internal inner class thread3(private val message: String) : Runnable {
+    internal inner class threadSendToCounterComplete(private val order: ParentModel, val orderStatusId:Int, val textDuration:String) : java.lang.Runnable {
+        override fun run() {
+            try {
+
+                if(IsKDSConnected){
+                    objectOutputStreamKDS!!.writeObject(CompleteOrderRequest(order,orderStatusId,textDuration));
+                    objectOutputStreamKDS!!.flush()
+                    //ShoppingCart.clearKDSItems()
+                    runOnUiThread(kotlinx.coroutines.Runnable {
+                        //showToast(this@MainActivity, "Order sent to kds.")
+                    })
+                }
+                else
+                    runOnUiThread{
+                        //showToast(this@MainActivity,"Disconnected.")
+                        //PopUpConnectKDS()
+                    }
+
+            }
+            catch (ex: java.lang.Exception){
+                IsKDSConnected=false
+                //Log.d(TAG, "")
+                runOnUiThread{
+                    //showToast(this@MainActivity,"Send to kds failed.")
+                    //PopUpConnectKDS()
+                }
+            }
+
+        }
+    }
+
+
+    internal inner class threadSendMessageToCounter(private val message: String) : Runnable {
         override fun run() {
             output!!.write(message + "\n")
             output!!.flush()
@@ -490,34 +593,49 @@ class MainActivity : AppCompatActivity() {
                     tvConnectionStatus.setTextColor(Color.RED)
                     tvIP!!.text = "IP: $SERVER_IP"
                     tvPort!!.text = "Port: $SERVER_PORT"
+                    binding.nodata.txtIPAddress.text = "IP: $SERVER_IP"
                 })
 
                 //serverSocket = ServerSocket(SERVER_PORT)
                 while (true) {
-                    var s: Socket? = null
+                    var clientSocket: Socket? = null
                     try {
                         // socket object to receive incoming client requests
-                        s = serverSocket!!.accept()
-                        println("A new client is connected : $s")
+                        clientSocket = serverSocket!!.accept()
+                        println("A new client is connected : $clientSocket")
 
                         runOnUiThread(Runnable {
-                            tvConnectionStatus!!.setText("Connected")
+                            tvConnectionStatus!!.text = "Connected"
                             tvConnectionStatus.setTextColor(Color.GREEN)
+                            IsKDSConnected=true
 
                         })
 
                         // obtaining input and out streams
-                        val dis = ObjectInputStream(s.getInputStream())
-                        val dos = ObjectOutputStream(s.getOutputStream())
+                        val dis = ObjectInputStream(clientSocket.getInputStream())
+                        //val dos = ObjectOutputStream(clientSocket.getOutputStream())
+                        //outputStreamKDS=  clientSocket!!.getOutputStream();
+                        objectOutputStreamKDS = ObjectOutputStream(clientSocket!!.getOutputStream())
+
                         println("Assigning new thread for this client")
 
                         // create a new thread object
-                        val t: Thread = ClientHandler(s, dis, dos)
+                        val t: Thread = ClientHandler(clientSocket, dis, objectOutputStreamKDS!!)
 
                         // Invoking the start() method
                         t.start()
-                    } catch (e: Exception) {
-                        s!!.close()
+
+                    }
+                    catch (e: SocketException){
+                        IsKDSConnected=false
+                        runOnUiThread(Runnable {
+                            tvConnectionStatus!!.setText("Disconnected")
+                            tvConnectionStatus.setTextColor(Color.RED)
+                        })
+                    }
+                    catch (e: Exception) {
+                        IsKDSConnected=false
+                        clientSocket!!.close()
                         e.printStackTrace()
                     }
                 }
@@ -560,6 +678,7 @@ class MainActivity : AppCompatActivity() {
                     e.printStackTrace()
                 }*/
             } catch (e: IOException) {
+                IsKDSConnected=false
                 e.printStackTrace()
             }
         }
@@ -574,7 +693,7 @@ class MainActivity : AppCompatActivity() {
             var toreturn: String
             while (true) {
                 try {
-                    var newOrder = dis!!.readObject()
+                    var newOrder = dis.readObject()
 
                     if (newOrder != null) {
                         newOrder = newOrder  as ParentModel
@@ -633,7 +752,7 @@ class MainActivity : AppCompatActivity() {
                 catch (e: EOFException) {
                     //con=false
                     e.printStackTrace()
-                    s!!.close()
+                    s.close()
                     break
                     /* Thread1 = Thread(thread1())
                      Thread1!!.start()*/

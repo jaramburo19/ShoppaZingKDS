@@ -134,12 +134,12 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
 
     fun PostStatusUpdate(){
 
-        var toUpdate = ShoppingCart.getOrders().filter { it->it.orderStatusId!=2 && it.OrderTypeId!= ORDER_TYPES_WALKIN && it.IsSynced==false && it.TodaysOrderNo !=null }
+        var toUpdate = ShoppingCart.getOrders().filter { it-> it.orderStatusId!=2 && it.OrderTypeId!= ORDER_TYPES_WALKIN && !it.IsSynced && it.TodaysOrderNo !=null }
 
         for (s in toUpdate){
             PostConfirmOrderAsync(
                 UpdateOrderRequest(
-                    s.OrderRefNo,s.orderStatusId,s.receiptNo,s.TodaysOrderNo
+                    s.OrderRefNo,s.orderStatusId,s.receiptNo,s.TodaysOrderNo,false
                 )
             )
 

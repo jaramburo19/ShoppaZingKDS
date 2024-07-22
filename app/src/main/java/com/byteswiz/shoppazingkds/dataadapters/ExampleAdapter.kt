@@ -52,8 +52,9 @@ class ExampleAdapter(var diningOptionName: String,
                     }
                 }
                 holder.btnPreparing.setOnClickListener{
-                    mListener!!.onPreparingClicked()
                     holder.btnPreparing.visibility=View.GONE
+                    mListener!!.onPreparingClicked()
+
                 }
 
                 /*holder.btnCompleted.setOnClickListener{
@@ -81,8 +82,9 @@ class ExampleAdapter(var diningOptionName: String,
                     }
                 }
                 holder.btnPreparing.setOnClickListener{
-                    mListener!!.onPreparingClicked()
                     holder.btnPreparing.visibility=View.GONE
+                    mListener!!.onPreparingClicked()
+
                 }
 
                 holder.btnCompleted.setOnClickListener{
@@ -166,6 +168,7 @@ class ExampleAdapter(var diningOptionName: String,
 
 
                 var qtyText: String =""
+
                 if (item.quantity.rem(1).equals(0.0))
                     qtyText = item.quantity.toInt().toString()
                 else
@@ -178,16 +181,18 @@ class ExampleAdapter(var diningOptionName: String,
                     val stringBuilder = StringBuilder()
                     for(m in item.modifiers!!.iterator()){
 
-                        stringBuilder.append(m.name + " x " + qtyText)
+                        stringBuilder.append(m.name + " x " + m.SelectedQty)
                         stringBuilder.append("\n")
                         //stringBuilder.append("\n")
                     }
-                    modifiers.text = stringBuilder.toString().trim { it <= ',' }
+                    modifiers.visibility = View.VISIBLE
+                    var modstr = stringBuilder.toString().trim { it <= ',' }
+                    modifiers.text = modstr
 
                 }
                 else
                 {
-                    modifiers.visibility = View.GONE
+                    modifiers.visibility=View.GONE
                     /*  itemView.modifiers.text = "x" + cartItem.quantity.toString()*/
                 }
             }

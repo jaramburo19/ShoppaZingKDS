@@ -94,7 +94,8 @@ class RecallActivity : AppCompatActivity() {
                 override fun onPreparingClicked(
                     receiptNo: String,
                     localUniqueId: String,
-                    position: Int
+                    position: Int,
+                    isLongClick: Boolean
                 ) {
 
                 }

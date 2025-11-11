@@ -4,14 +4,14 @@ plugins {
 }
 apply plugin: 'kotlin-kapt'
 android {
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.byteswiz.shoppazingkds"
         minSdkVersion 23
-        targetSdkVersion 34
-        versionCode 10
-        versionName "1.0.010"
+        targetSdkVersion 36
+        versionCode 13
+        versionName "1.0.013"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -59,11 +59,13 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
     //Header Footer
-    implementation 'com.mikhaellopez:hfrecyclerview-kotlin:1.1.1'
+    //implementation 'com.mikhaellopez:hfrecyclerview-kotlin:1.1.1'
+
+    implementation 'com.mikhaellopez:hfrecyclerview:1.2.0' // Check for the latest version
 
     //DB
-    implementation 'io.paperdb:paperdb:2.6'
-
+    //implementation 'io.paperdb:paperdb:2.6'
+    implementation 'io.github.pilgr:paperdb:2.7.2'
 
     implementation project(":ParentModel")
 
@@ -158,5 +160,10 @@ dependencies {
     implementation "com.squareup.retrofit2:converter-gson:2.9.0"
 
     implementation 'com.google.code.gson:gson:2.10.1'
+
+
+    //CIRCULAR IMAGE VIEW
+    implementation 'de.hdodenhof:circleimageview:3.1.0'
+    implementation 'com.github.siyamed:android-shape-imageview:0.9.3@aar'
 
 }

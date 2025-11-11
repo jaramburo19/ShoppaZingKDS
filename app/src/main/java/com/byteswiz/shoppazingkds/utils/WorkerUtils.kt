@@ -1,5 +1,6 @@
 package com.byteswiz.shoppazingkds.utils
 
+import android.Manifest
 import android.annotation.TargetApi
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,6 +15,7 @@ import android.renderscript.Element
 import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
 import androidx.annotation.RequiresApi
+import androidx.annotation.RequiresPermission
 import androidx.annotation.WorkerThread
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -38,6 +40,7 @@ import java.util.*
  * @param message Message shown on the notification
  * @param context Context needed to create Toast
  */
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
 fun makeStatusNotification(message: String, context: Context, notificationTitle: String) {
 
     // Make a channel if necessary
@@ -115,13 +118,16 @@ fun sleepby(mills: Long) {
 //@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 @WorkerThread
-fun blurBitmap(bitmap: Bitmap, applicationContext: Context): Bitmap {
+/*fun blurBitmap(bitmap: Bitmap, applicationContext: Context): Bitmap {
     lateinit var rsContext: RenderScript
     try {
 
         // Create the output bitmap
-        val output = Bitmap.createBitmap(
-            bitmap.width, bitmap.height, bitmap.config)
+        val output = bitmap.config?.let {
+            Bitmap.createBitmap(
+                bitmap.width, bitmap.height, it
+            )
+        }
 
         // Blur the image
         rsContext = RenderScript.create(applicationContext, RenderScript.ContextType.DEBUG)
@@ -139,7 +145,7 @@ fun blurBitmap(bitmap: Bitmap, applicationContext: Context): Bitmap {
     } finally {
         rsContext.finish()
     }
-}
+}*/
 
 /**
  * Writes bitmap to a temporary file and returns the Uri for the file

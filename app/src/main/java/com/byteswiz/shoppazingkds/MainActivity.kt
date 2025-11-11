@@ -1,5 +1,6 @@
 package com.byteswiz.shoppazingkds
 
+import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
@@ -13,6 +14,7 @@ import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.Window
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -63,12 +65,12 @@ class MainActivity : AppCompatActivity() {
     private var objectOutputStreamKDS:ObjectOutputStream?=null
     var ThreadKDSComplete: Thread? = null
 
-    var tvIP: TextView? = null
-    var tvPort: TextView? = null
+   /* var tvIP: TextView? = null
+    var tvPort: TextView? = null*/
     lateinit var tvMessages: TextView
     lateinit var etMessage: EditText
     lateinit var btnSend: Button
-    lateinit var tvConnectionStatus: TextView
+    //lateinit var tvConnectionStatus: TextView
     lateinit var txtTotal: TextView
     var SERVER_IP = ""
     val SERVER_PORT = 8081
@@ -152,9 +154,9 @@ class MainActivity : AppCompatActivity() {
 
         Paper.init(this)
 
-        tvIP = findViewById(R.id.tvIP)
-        tvPort = findViewById(R.id.tvPort)
-        tvConnectionStatus = findViewById(R.id.tvConnectionStatus)
+        //tvIP = findViewById(R.id.tvIP)
+        //tvPort = findViewById(R.id.tvPort)
+        //tvConnectionStatus = findViewById(R.id.tvConnectionStatus)
 
 
         try {
@@ -182,6 +184,7 @@ class MainActivity : AppCompatActivity() {
          Thread1!!.start()
 
 
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN;
 
 
     }
@@ -465,10 +468,10 @@ class MainActivity : AppCompatActivity() {
                 serverSocket = ServerSocket(SERVER_PORT)
                 serverSocket!!.setReuseAddress(true);
                 runOnUiThread(Runnable {
-                    tvConnectionStatus!!.setText("Disconnected")
-                    tvConnectionStatus.setTextColor(Color.RED)
-                    tvIP!!.text = "IP: $SERVER_IP"
-                    tvPort!!.text = "Port: $SERVER_PORT"
+                    binding.tvConnectionStatus!!.setText("Disconnected")
+                    binding.tvConnectionStatus.setTextColor(Color.RED)
+                    binding.tvIP!!.text = "IP: $SERVER_IP"
+                    binding.tvPort!!.text = "Port: $SERVER_PORT"
                     binding.nodata.txtIPAddress.text ="IP: $SERVER_IP"
                 })
                 try {
@@ -487,8 +490,8 @@ class MainActivity : AppCompatActivity() {
                     input = BufferedReader(InputStreamReader(socket.getInputStream()))
 
                     runOnUiThread(Runnable {
-                        tvConnectionStatus!!.setText("Connected ")
-                        tvConnectionStatus.setTextColor(Color.GREEN)
+                        binding.tvConnectionStatus!!.setText("Connected ")
+                        binding.tvConnectionStatus.setTextColor(Color.GREEN)
 
                     })
                     Thread2 = Thread(thread2())
@@ -706,10 +709,10 @@ class MainActivity : AppCompatActivity() {
                 serverSocket = ServerSocket(SERVER_PORT)
                 serverSocket!!.setReuseAddress(true);
                 runOnUiThread(Runnable {
-                    tvConnectionStatus!!.setText("Disconnected")
-                    tvConnectionStatus.setTextColor(Color.RED)
-                    tvIP!!.text = "IP: $SERVER_IP"
-                    tvPort!!.text = "Port: $SERVER_PORT"
+                    binding.tvConnectionStatus!!.setText("Disconnected")
+                    binding.tvConnectionStatus.setTextColor(Color.RED)
+                    binding.tvIP!!.text = "IP: $SERVER_IP"
+                    binding.tvPort!!.text = "Port: $SERVER_PORT"
                     binding.nodata.txtIPAddress.text = "IP: $SERVER_IP"
                 })
 
@@ -722,8 +725,8 @@ class MainActivity : AppCompatActivity() {
                         println("A new client is connected : $clientSocket")
 
                         runOnUiThread(Runnable {
-                            tvConnectionStatus!!.text = "Connected"
-                            tvConnectionStatus.setTextColor(Color.GREEN)
+                            binding.tvConnectionStatus!!.text = "Connected"
+                            binding.tvConnectionStatus.setTextColor(Color.GREEN)
                             IsKDSConnected=true
 
                         })
@@ -746,8 +749,8 @@ class MainActivity : AppCompatActivity() {
                     catch (e: SocketException){
                         IsKDSConnected=false
                         runOnUiThread(Runnable {
-                            tvConnectionStatus!!.setText("Disconnected")
-                            tvConnectionStatus.setTextColor(Color.RED)
+                            binding.tvConnectionStatus!!.setText("Disconnected")
+                            binding.tvConnectionStatus.setTextColor(Color.RED)
                         })
                     }
                     catch (e: Exception) {

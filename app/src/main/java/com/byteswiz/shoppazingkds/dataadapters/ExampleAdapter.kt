@@ -13,7 +13,7 @@ import com.byteswiz.parentmodel.KDSCartItem
 
 import com.byteswiz.shoppazingkds.R
 import com.byteswiz.shoppazingkds.interfaces.OnButtonClicked
-import com.mikhaellopez.hfrecyclerviewkotlin.HFRecyclerView
+import com.mikhaellopez.hfrecyclerview.HFRecyclerView
 
 
 //this class uses //Header Footer//    implementation 'com.mikhaellopez:hfrecyclerview-kotlin:1.1.1'
@@ -124,7 +124,11 @@ class ExampleAdapter(var diningOptionName: String,
 
             var IsTicked: Boolean =false
             fun bind(item: KDSCartItem, listener: OnButtonClicked?, orderNo: String) {
-                text.text = item.CombiName
+
+                if(item.quantity < 0)
+                    text.text = item.CombiName + "(**DELETED)"
+                else
+                    text.text = item.CombiName
 
                 IsTicked = if(item.IsDone==null)
                                 false

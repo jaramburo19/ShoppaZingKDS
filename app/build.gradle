@@ -10,15 +10,21 @@ android {
         applicationId "com.byteswiz.shoppazingkds"
         minSdkVersion 23
         targetSdkVersion 36
-        versionCode 13
-        versionName "1.0.013"
+        versionCode 17
+        versionName "1.0.017"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
+            // variant with `isDebuggable=false`.
             minifyEnabled false
+
+
+            // Enables resource shrinking, which is performed by the
+            // Android Gradle plugin.
+            //shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -165,5 +171,10 @@ dependencies {
     //CIRCULAR IMAGE VIEW
     implementation 'de.hdodenhof:circleimageview:3.1.0'
     implementation 'com.github.siyamed:android-shape-imageview:0.9.3@aar'
+
+    // For Kotlin users also import the Kotlin extensions library for Play In-App Update:
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+    //In-app updates
+
 
 }

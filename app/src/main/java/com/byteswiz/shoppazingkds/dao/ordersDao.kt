@@ -31,10 +31,16 @@ interface OrdersDao {
     @Query("SELECT * FROM Orders where orderStatusId == 4 ORDER BY Id DESC LIMIT 50")
     fun getReadyOrders():MutableList<ParentModel>
 
+    @Query("SELECT * FROM Orders where orderStatusId <> 2 and OrderTypeId <> 3 and IsSynced==0 and TodaysOrderNo is not null")
+    fun getOrders():MutableList<ParentModel>
+
+    @Query("SELECT * FROM Orders where orderStatusId <> 2 and OrderTypeId <> 3 and IsSynced==0 and TodaysOrderNo is not null")
+    fun getOrdersForPostStatusUpdate():MutableList<ParentModel>
+
     @Query("SELECT * FROM Orders where localUniqueId =:uid")
     fun getOrderByLocalUID(uid: String):ParentModel
 
-    @Query("UPDATE Orders  SET orderStatusId =:statusId where localUniqueId =:uid")
+    @Query("UPDATE Orders  SET orderStatusId =:statusId, IsSynced=0 where localUniqueId =:uid")
     fun updateOrderStatusIdByLocalUID(uid:String, statusId:Int)
 
 

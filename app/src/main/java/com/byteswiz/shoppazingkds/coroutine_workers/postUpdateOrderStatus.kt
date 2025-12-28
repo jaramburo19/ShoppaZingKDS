@@ -13,6 +13,7 @@ import com.byteswiz.shoppazingkds.api.ApiClient
 import com.byteswiz.shoppazingkds.cart.ShoppingCart
 import com.byteswiz.shoppazingkds.data.UpdateOrderRequest
 import com.byteswiz.shoppazingkds.data.UpdateOrderResponse
+import com.byteswiz.shoppazingkds.roomdb.AppDatabase
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_TYPES_WALKIN
 import com.byteswiz.shoppazingkds.utils.Constants.TEST_ONLINE_URL
 import com.byteswiz.shoppazingkds.utils.SessionManager
@@ -32,7 +33,8 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
     private var sessionManager: SessionManager
     private var apiClient: ApiClient
     val appContext = applicationContext
-
+    val db = AppDatabase.getAppDataBase(appContext)!!
+    val ordersDao = db.ordersDao()
 
     init {
 
@@ -47,12 +49,12 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
 
         return try {
 
-            if(hasActiveInternetConnection(appContext)){
-                //PostStatusUpdate()
+            //if(hasActiveInternetConnection(appContext)){
+                PostStatusUpdate()
                 Result.success()
-            }
-            else
-                Result.failure()
+            //}
+            //else
+                //Result.failure()
 
         } catch (throwable: Throwable) {
             Log.d("ErrorPostingSales", throwable.localizedMessage)
@@ -134,17 +136,24 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
 
     fun PostStatusUpdate(){
 
-        /*var toUpdate = ShoppingCart.getOrders().filter { it-> it.orderStatusId!=2 && it.OrderTypeId!= ORDER_TYPES_WALKIN && !it.IsSynced && it.TodaysOrderNo !=null }
+        //var toUpdate = ShoppingCart.getOrders().filter { it-> it.orderStatusId!=2 && it.OrderTypeId!= ORDER_TYPES_WALKIN && !it.IsSynced && it.TodaysOrderNo !=null }
+
+        var orders = ordersDao.getOrders()
+        var toUpdate =ordersDao.getOrdersForPostStatusUpdate()
 
         for (s in toUpdate){
             PostConfirmOrderAsync(
                 UpdateOrderRequest(
-                    s.OrderRefNo,s.orderStatusId,s.receiptNo,s.TodaysOrderNo,false
-                )
+                    s.OrderRefNo
+                    ,s.orderStatusId
+                    ,s.receiptNo
+                    ,s.TodaysOrderNo
+                    ,false
+                    ,s.localUniqueId
+                ),
+                appContext
             )
-
-
-        }*/
+        }
     }
 
 
@@ -185,7 +194,7 @@ class postUpdateOrderStatus(ctx: Context, params: WorkerParameters): CoroutineWo
 
             requestResponse = response.body()
             if(requestResponse!!.status==200)
-                ShoppingCart.updateSyncStatus(true,model.TodaysOrderNo,_context)
+                ShoppingCart.updateSyncStatus(true,model.LocalUniqueId,_context)
 
         }
         catch (ex: Exception) {

@@ -31,12 +31,21 @@ object Constants {
     //const val BASE_URL = "http://10.0.2.2:44315/"
 
     //QA
-    /*const val BASE_URL = "http://jaramburo19-001-site29.ftempurl.com/api/"
-    const val BACKEND_BASE_URL = "http://jaramburo19-001-site29.ftempurl.com/"*/
+/*
+    const val BASE_URL = "https://test.shoppazing.com/api/"
+    const val BACKEND_BASE_URL = "https://test.shoppazing.com/"
+*/
 
     //LIVE
-     const val BASE_URL = "http://sellercenter.shoppazing.com/api/"
-     const val BACKEND_BASE_URL = "http://sellercenter.shoppazing.com/"
+     const val BASE_URL = "https://sellercenter.shoppazing.com/api/"
+     const val BACKEND_BASE_URL = "https://sellercenter.shoppazing.com/"
+
+
+    //DEV
+/*    const val BASE_URL = "http://jaramburo19-001-site11.ftempurl.com/api/"
+    const val BACKEND_BASE_URL = "http://jaramburo19-001-site11.ftempurl.com//"*/
+
+
 
     //const val BASE_URL = "http://jaramburo19-001-site28.ftempurl.com/api/"
     //const val BASE_URL = "http://sellercenter.shoppazing.com/api/"
@@ -56,7 +65,7 @@ object Constants {
 
     const val GETITEMS_URL = "items/getitems/"
 
-    const val UDPATE_ORDER_STATUS_URL = "shop/updateorderstatus/"
+    const val UDPATE_ORDER_STATUS_URL = "merchants/updateorderstatus/"
 
 
     //NOTIFICATION CONSTANTS

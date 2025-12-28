@@ -7,7 +7,6 @@ class UpdateOrderRequest(
     @SerializedName("OrderNo")
     var OrderNo: String,
 
-
     @SerializedName("OrderStatusId")
     var OrderStatusId: Int,
 
@@ -18,7 +17,11 @@ class UpdateOrderRequest(
     var TodaysOrderNo: String,
 
     @SerializedName("IsManualDelivered")
-    var IsManualDelivered: Boolean
+    var IsManualDelivered: Boolean,
+
+    @SerializedName("LocalUniqueId")
+    var LocalUniqueId: String,
+
 
 )
 

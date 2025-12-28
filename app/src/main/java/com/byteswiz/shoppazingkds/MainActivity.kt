@@ -1,9 +1,12 @@
 package com.byteswiz.shoppazingkds
 
+import android.app.Activity
+import android.app.ComponentCaller
 import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.IntentSender
 import android.graphics.Color
 import android.media.MediaPlayer
 import android.net.wifi.WifiInfo
@@ -11,6 +14,7 @@ import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -34,6 +38,15 @@ import com.byteswiz.shoppazingkds.utils.Constants.ORDER_STATUS_READY
 import com.byteswiz.shoppazingkds.utils.makeSound
 import com.byteswiz.shoppazingkds.utils.makeStatusNotification
 import com.byteswiz.shoppazingkds.viewmodels.SyncViewModel
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.InstallStateUpdatedListener
+import com.google.android.play.core.install.model.ActivityResult
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.InstallStatus
+import com.google.android.play.core.install.model.UpdateAvailability
 import io.paperdb.Paper
 import kotlinx.coroutines.*
 import java.io.*
@@ -46,14 +59,21 @@ import java.net.UnknownHostException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.text.DateFormat
+import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(),CoroutineScope {
     //lateinit var recyclerView: RecyclerView
 
+    companion object{
+        var TAG="MainActivity"
+    }
     var serverSocket: ServerSocket? = null
     var Thread1: Thread? = null
     var Thread2: Thread? = null
@@ -96,12 +116,12 @@ class MainActivity : AppCompatActivity() {
         job.join() // wait until child coroutine completes
     }*/
 
-    val coroutineContext: CoroutineContext
+    override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main + jobPostStatus
 
     private var jobPostStatus: Job = Job()
 
-    private fun startPostUpdateCoroutineSync() = GlobalScope.launch(Dispatchers.IO) {
+    private fun startPostUpdateCoroutineSync() = launch(Dispatchers.IO) {
 
         do {
 
@@ -389,6 +409,7 @@ class MainActivity : AppCompatActivity() {
 
 
         refreshOrders()
+        checkNewAppVersionStateOnResume()
 
 /*        var currentOrders =ShoppingCart.getOrders().filter { it.orderStatusId != ORDER_STATUS_READY }.toMutableList()
         ShowHideNodata(currentOrders)
@@ -892,5 +913,277 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+
+    override fun onStart() {
+        super.onStart()
+        setupInAppUpdate()
+        checkInAppUpdate()
+    }
+
+    //region IN APP Update
+    /**
+     * Creates instance of the manager.
+     */
+    private var appUpdateManager: AppUpdateManager? = null
+    val REQ_CODE_VERSION_UPDATE = 530
+    private var installStateUpdatedListener: InstallStateUpdatedListener? = null
+
+
+    var IS_SERVICE_CHARGE_ENABLED = false
+    var IS_QRCODE_SCANNER_ENABLED = false
+
+
+
+
+    private fun startAppUpdateImmediate(appUpdateInfo: AppUpdateInfo) {
+        try {
+            appUpdateManager!!.startUpdateFlowForResult(
+                appUpdateInfo,
+                AppUpdateType.IMMEDIATE,  // The current activity making the update request.
+                this,  // Include a request code to later monitor this update request.
+                REQ_CODE_VERSION_UPDATE)
+        } catch (e: IntentSender.SendIntentException) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun startAppUpdateFlexible(appUpdateInfo: AppUpdateInfo) {
+        try {
+            appUpdateManager!!.startUpdateFlowForResult(
+                appUpdateInfo,
+                AppUpdateType.FLEXIBLE,  // The current activity making the update request.
+                this,  // Include a request code to later monitor this update request.
+                REQ_CODE_VERSION_UPDATE)
+        } catch (e: IntentSender.SendIntentException) {
+            e.printStackTrace()
+            unregisterInstallStateUpdListener()
+        }
+    }
+
+    /**
+     * Displays the snackbar notification and call to action.
+     * Needed only for Flexible app update
+     */
+    private fun popupSnackbarForCompleteUpdateAndUnregister() {
+        val snackbar = Snackbar.make(binding.root, "Update Downloaded", Snackbar.LENGTH_INDEFINITE)
+        snackbar.setAction("RESTART", View.OnClickListener { appUpdateManager!!.completeUpdate() })
+        snackbar.setActionTextColor(resources.getColor(R.color.colorPrimary))
+        snackbar.show()
+        unregisterInstallStateUpdListener()
+    }
+
+    private fun popupSnackbarForRetryUpdate() {
+        Snackbar.make(
+            binding.root,
+            "Unable to download update.",
+            Snackbar.LENGTH_INDEFINITE
+        ).apply {
+            setAction("RETRY") { checkInAppUpdate() }
+            show()
+        }
+    }
+    /*private fun popupSnackbarForCompleteUpdate() {
+        val snackbar = Snackbar.make(binding.drawerLayout, "New app is ready", Snackbar.LENGTH_INDEFINITE)
+        snackbar.setAction("Install", View.OnClickListener { appUpdateManager!!.completeUpdate() })
+        snackbar.setActionTextColor(resources.getColor(R.color.colorPrimary))
+        snackbar.show()
+    }*/
+
+
+    private fun setupInAppUpdate() {
+        try{
+            // Creates instance of the manager.
+            appUpdateManager = AppUpdateManagerFactory.create(this)
+
+            // Returns an intent object that you use to check for an update.
+            //val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager!!.appUpdateInfo
+
+            // Create a listener to track request state updates.
+            installStateUpdatedListener = InstallStateUpdatedListener { installState ->
+                // Show module progress, log state, or install the update.
+                if (installState.installStatus() == InstallStatus.DOWNLOADED) // After the update is downloaded, show a notification
+                // and request user confirmation to restart the app.
+                    popupSnackbarForCompleteUpdateAndUnregister()
+                else if(installState.installStatus() == InstallStatus.FAILED)
+                    popupSnackbarForRetryUpdate()
+                else if (installState.installStatus() == InstallStatus.INSTALLED){
+                    /*if (appUpdateManager != null){
+                        appUpdateManager!!.unregisterListener(installStateUpdatedListener!!);
+                    }*/
+                    unregisterInstallStateUpdListener()
+                }
+                else{
+                    Log.i(TAG, "InstallStateUpdatedListener: state: " + installState.installStatus());
+                }
+            }
+
+            //checkNewAppVersionStateOnResume()
+
+            // Checks that the platform will allow the specified type of update.
+            /* appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
+
+                 if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE ) {
+                     // Request the update.
+                     *//*
+                                    if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+                                        // Start an update.
+                                        startAppUpdateImmediate(appUpdateInfo)
+                                    }
+                                    else{
+                                        if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
+
+                                         // Before starting an update, register a listener for updates.
+                                         appUpdateManager!!.registerListener(installStateUpdatedListener!!)
+                                         // Start an update.
+                                         startAppUpdateFlexible(appUpdateInfo)
+                                        }
+                                    }*//*
+
+                    if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
+                        // Start an update.
+                        startAppUpdateFlexible(appUpdateInfo)
+                    } else {
+                        if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+                            // Start an update.
+                            startAppUpdateImmediate(appUpdateInfo)
+                        }
+                    }
+
+                }else if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED){
+                    //CHECK THIS if AppUpdateType.FLEXIBLE, otherwise you can skip
+                    popupSnackbarForCompleteUpdateAndUnregister()
+                } else {
+                    Log.e(TAG, "checkForAppUpdateAvailability: something else");
+                }
+
+            }*/
+        }catch (e: IntentSender.SendIntentException) {
+            e.printStackTrace()
+        }
+
+    }
+
+    /**
+     * Checks that the update is not installed during 'onResume()'.
+     * However, you should execute this check at all app entry points.
+     */
+    private fun checkNewAppVersionStateOnResume() {
+
+        // Checks that the platform will allow the specified type of update.
+        appUpdateManager!!.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
+
+            if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
+                //CHECK THIS if AppUpdateType.FLEXIBLE, otherwise you can skip
+                popupSnackbarForCompleteUpdateAndUnregister()
+            }  //IMMEDIATE:
+            else if(appUpdateInfo.updateAvailability()
+                == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS){
+                // If an in-app update is already running, resume the update.
+                startAppUpdateImmediate(appUpdateInfo)
+            }
+            /*else if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE ) {
+                // Request the update.
+                if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
+                    // Before starting an update, register a listener for updates.
+                    appUpdateManager!!.registerListener(installStateUpdatedListener!!)
+                    // Start an update.
+                    startAppUpdateFlexible(appUpdateInfo)
+                } else if(appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)){
+                    // Start an update.
+                    startAppUpdateImmediate(appUpdateInfo)
+                }
+
+            }*/
+            else {
+                Log.e(TAG, "checkForAppUpdateAvailability: something else");
+            }
+
+        }
+    }
+
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?,
+        caller: ComponentCaller
+    ) {
+        super.onActivityResult(requestCode, resultCode, data, caller)
+
+        //region IN-APP UPDATE CALLBACK
+        if (requestCode == REQ_CODE_VERSION_UPDATE) {
+            when (resultCode) {
+                Activity.RESULT_OK -> {
+                    //Log.d(com.byteswiz.byteswizpos.Activities.MainActivity.Companion.TAG, "" + "Result Ok")
+                    //  handle user's approval }
+                    Toast.makeText(this, "Update success! Result Code: " + resultCode, Toast.LENGTH_LONG).show();
+                }
+                Activity.RESULT_CANCELED -> {
+                    {
+                        //if you want to request the update again just call checkUpdate()
+
+                    }
+                    Toast.makeText(this, "Update canceled by user! Result Code: " + resultCode, Toast.LENGTH_LONG).show();
+                    //Log.d(com.byteswiz.byteswizpos.Activities.MainActivity.Companion.TAG, "" + "Result Cancelled")
+                    finish()
+                    //  handle user's rejection  }
+                }
+                ActivityResult.RESULT_IN_APP_UPDATE_FAILED -> {
+                    //if you want to request the update again just call checkUpdate()
+                    Toast.makeText(this, "Update Failed! Result Code: " + resultCode, Toast.LENGTH_LONG).show();
+
+                    //if(sessionManager.getIsLive())
+                    checkNewAppVersionStateOnResume()
+
+                    //Log.d(com.byteswiz.byteswizpos.Activities.MainActivity.Companion.TAG, "" + "Update Failure")
+                    //  handle update failure
+                }
+            }
+        }
+    }
+
+    private fun checkInAppUpdate() {
+        appUpdateManager!!
+            .appUpdateInfo
+            .addOnSuccessListener{ appUpdateInfo ->
+                when (appUpdateInfo.updateAvailability()) {
+                    UpdateAvailability.UPDATE_AVAILABLE -> when {
+                        appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE) -> {
+                            // Before starting an update, register a listener for updates.
+                            appUpdateManager!!.registerListener(installStateUpdatedListener!!)
+                            startAppUpdateFlexible(appUpdateInfo)
+                        }
+                        appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE) -> startAppUpdateImmediate(
+                            appUpdateInfo
+                        )
+                        else -> {
+                            // No update is allowed
+                        }
+                    }
+                    UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS -> startAppUpdateImmediate(
+                        appUpdateInfo
+                    )
+                    else -> {
+                        // No op
+                    }
+                }
+            }
+    }
+
+    /**
+     * Needed only for FLEXIBLE update
+     */
+    private fun unregisterInstallStateUpdListener() {
+        try{
+            if (appUpdateManager != null && installStateUpdatedListener != null) appUpdateManager!!.unregisterListener(installStateUpdatedListener!!)
+        }catch (ex:Exception){
+
+        }
+    }
+
+
+    //endregion
+
+
+
 
 }

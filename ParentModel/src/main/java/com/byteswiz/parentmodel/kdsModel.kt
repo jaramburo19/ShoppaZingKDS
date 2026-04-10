@@ -63,7 +63,11 @@ data class ParentModel (
 
     @SerializedName("localUniqueId")
     var localUniqueId: String
-):Serializable
+):Serializable {
+    companion object {
+        private const val serialVersionUID: Long = 1L
+    }
+}
 
 @Entity(tableName = "CartItems",
     foreignKeys = [
@@ -104,7 +108,11 @@ data class KDSCartItem(
     @SerializedName("ParentModelId")
     var ParentModelId: Long?
 
-): Serializable
+): Serializable {
+    companion object {
+        private const val serialVersionUID: Long = 1L
+    }
+}
 
 
 class KDSModifiersModel(
@@ -159,11 +167,8 @@ class KDSModifiersModel(
     var SelectedQty:Int
 
 ) : Serializable {
-    /*var Id: Int = 0
-
-    var isChecked = false
-
-    var name: String? = null*/
-
+    companion object {
+        private const val serialVersionUID: Long = 1L
+    }
 }
 

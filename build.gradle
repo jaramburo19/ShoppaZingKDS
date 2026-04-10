@@ -1,18 +1,20 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
-    //ext.kotlin_version = '1.9.20'
     ext.kotlin_version = '2.1.21'
     repositories {
         google()
         mavenCentral()
+        // ADDED: Ensures Gradle can search the official plugin portal
+        gradlePluginPortal()
         maven { url 'https://jitpack.io' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.3.1'
+        // This is where we tell Gradle where to find the Android tools
+        classpath 'com.android.tools.build:gradle:8.7.3'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
+        // FIXED: The correct KSP version string for Kotlin 2.1.21
+        classpath 'com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:2.1.21-2.0.2'
     }
 }
 
@@ -20,6 +22,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        gradlePluginPortal()
         maven { url "https://jitpack.io" }
     }
 }

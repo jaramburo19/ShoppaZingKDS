@@ -24,6 +24,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.byteswiz.parentmodel.CompleteOrderRequest
@@ -33,6 +34,7 @@ import com.byteswiz.shoppazingkds.dataadapters.ParentAdapter
 import com.byteswiz.shoppazingkds.databinding.ActivityMainBinding
 import com.byteswiz.shoppazingkds.interfaces.OnParentButtonClicked
 import com.byteswiz.shoppazingkds.livedata.CartViewModel
+import com.byteswiz.shoppazingkds.network.KDSServerManager
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_STATUS_PREPARING
 import com.byteswiz.shoppazingkds.utils.Constants.ORDER_STATUS_READY
 import com.byteswiz.shoppazingkds.utils.makeSound
@@ -66,6 +68,9 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
+import java.net.NetworkInterface
+import java.net.Inet4Address
+
 
 
 class MainActivity : AppCompatActivity(),CoroutineScope {
@@ -74,11 +79,11 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
     companion object{
         var TAG="MainActivity"
     }
-    var serverSocket: ServerSocket? = null
+    /*var serverSocket: ServerSocket? = null
     var Thread1: Thread? = null
     var Thread2: Thread? = null
     var Thread3: Thread? = null
-    var Thread4: Thread? = null
+    var Thread4: Thread? = null*/
 
     var IsKDSConnected: Boolean=false
     //private var outputStreamKDS:OutputStream?=null
@@ -115,6 +120,10 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
         println("Hello,")
         job.join() // wait until child coroutine completes
     }*/
+
+    // Put this at the top of MainActivity
+    private val kdsServerManager = KDSServerManager()
+
 
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main + jobPostStatus
@@ -181,6 +190,15 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
 
         try {
             SERVER_IP = getLocalIpAddress()
+            // ... (your other init code) ...
+
+            // 1. Fetch the IP immediately
+            SERVER_IP = getLocalIpAddress()
+
+            // 2. Force the UI to show it right now
+            binding.tvIP.text = "IP: $SERVER_IP"
+            binding.nodata.txtIPAddress.text = "IP: $SERVER_IP"
+
         } catch (e: UnknownHostException) {
             e.printStackTrace()
         }
@@ -194,14 +212,15 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
 
         initRecycler()
 
+        setupKDSClientManager()
 
 
         //TEMPORARY DELETE THIS
        // Thread1 = Thread(thread1())
        // Thread1!!.start()
 
-         Thread1 = Thread(threadStart())
-         Thread1!!.start()
+         /*Thread1 = Thread(threadStart())
+         Thread1!!.start()*/
 
 
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN;
@@ -209,10 +228,37 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
 
     }
 
-    val executor = Executors.newSingleThreadExecutor()
-    val handler = Handler(Looper.getMainLooper())
+    fun setupKDSClientManager(){
 
-    fun setupAdapters(){
+        // Put this inside onCreate(), replacing Thread1 = Thread(threadStart()).start()
+        lifecycleScope.launch {
+            kdsServerManager.serverState.collect { state ->
+                binding.tvConnectionStatus.text = state
+                if (state == "Connected") {
+                    binding.tvConnectionStatus.setTextColor(Color.GREEN)
+                } else {
+                    binding.tvConnectionStatus.setTextColor(Color.RED)
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            kdsServerManager.incomingOrders.collect { newOrder ->
+                addNewOrder(newOrder)
+                playSound()
+            }
+        }
+
+        // Start the server socket in the background
+        lifecycleScope.launch {
+            kdsServerManager.startServer()
+        }
+    }
+
+    /*val executor = Executors.newSingleThreadExecutor()
+    val handler = Handler(Looper.getMainLooper())*/
+
+    /*fun setupAdapters(){
 
         executor.execute {
             var currentOrders =ShoppingCart.getOrders(this@MainActivity)
@@ -259,7 +305,37 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                 })
             }
         }
+    }*/
+
+
+    fun setupAdapters() {
+        // Initialize synchronously on the Main Thread with an empty list
+        _adapter = ParentAdapter(this, this, mutableListOf(), object : OnParentButtonClicked {
+
+            override fun onPreparingClicked(receiptNo: String, localUniqueId: String, position: Int, isLongClick: Boolean) {
+                updateOrderStatusExecute(localUniqueId, ORDER_STATUS_PREPARING, position)
+                if (isLongClick) Toast.makeText(this@MainActivity, "Order preparing...", Toast.LENGTH_SHORT).show()
+                stopSound()
+            }
+
+            override fun onCompletedClicked(receiptNo: String, localUniqueId: String, position: Int, orderRefNo: String, textDuration: String) {
+                ConfirmComplete(receiptNo, localUniqueId, position, orderRefNo, textDuration)
+            }
+
+            override fun onRecallClicked(receiptNo: String, localUniqueId: String) {}
+
+            override fun onChildItemClicked(parentModelId: Int, itemId: Long, flag: Boolean) {
+                updateChildOrderStatusExecute(parentModelId, itemId, flag)
+            }
+        })
     }
+
+    fun updateChildOrderStatusExecute(parentModelId: Int, itemId: Long, flag: Boolean) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            ShoppingCart.updateChildItemStatus(parentModelId, itemId, flag, this@MainActivity)
+        }
+    }
+    /*
 
     fun updateChildOrderStatusExecute(parentModelId:Int,itemId: Long, flag:Boolean){
 
@@ -272,10 +348,10 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
         }
 
 
-    }
+    }*/
 
 
-    fun refreshOrders(){
+   /* fun refreshOrders(){
 
 
         executor.execute {
@@ -295,7 +371,23 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
 
             }
         }
+    }*/
+
+    fun refreshOrders() {
+        lifecycleScope.launch {
+            // Fetch data in background
+            val currentOrders = withContext(Dispatchers.IO) {
+                ShoppingCart.getOrders(this@MainActivity)
+            }
+
+            // Push data to the already-existing adapter
+            _adapter.setOrders(currentOrders)
+            _adapter.notifyDataSetChanged()
+
+            ShowHideNodata(currentOrders)
+        }
     }
+    /*
     fun updateOrderStatusExecute(localUniqueId:String, orderStatusId: Int, position:Int){
         if(orderStatusId== ORDER_STATUS_PREPARING)
             _adapter.notifyChanged(position, orderStatusId)
@@ -328,14 +420,55 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
 
             }
         }
+    }*/
+
+    fun updateOrderStatusExecute(localUniqueId: String, orderStatusId: Int, position: Int) {
+        if (orderStatusId == ORDER_STATUS_PREPARING) _adapter.notifyChanged(position, orderStatusId)
+        else if (orderStatusId == ORDER_STATUS_READY) _adapter.removeAt(position)
+
+        lifecycleScope.launch {
+            val currentOrders = withContext(Dispatchers.IO) {
+                ShoppingCart.updateStatus(orderStatusId, localUniqueId, this@MainActivity)
+                ShoppingCart.getOrders(this@MainActivity)
+            }
+
+            stopSound()
+            ShowHideNodata(currentOrders)
+        }
     }
 
-    fun sendtoCounterCompleteExecute(localUniqueId: String, textDuration:String){
-        executor.execute {
-            var orderItem = ShoppingCart.getOrderByLocalUID(localUniqueId,this)
-            handler.post {
-                ThreadKDSComplete = Thread(threadSendToCounterComplete(orderItem!!, ORDER_STATUS_READY, textDuration))
-                ThreadKDSComplete!!.start()
+    fun updateSyncStatusExecute(localUniqueId: String, isSynced: Boolean) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            ShoppingCart.updateSyncStatus(false, localUniqueId, this@MainActivity)
+        }
+    }
+
+    fun sendtoCounterCompleteExecute(localUniqueId: String, textDuration: String) {
+        lifecycleScope.launch {
+            val orderItem = withContext(Dispatchers.IO) {
+                ShoppingCart.getOrderByLocalUID(localUniqueId, this@MainActivity)
+            }
+
+            if (orderItem != null) {
+                val request = CompleteOrderRequest(orderItem, ORDER_STATUS_READY, textDuration)
+                kdsServerManager.sendOrderComplete(request)
+            }
+        }
+    }
+
+    fun addNewOrder(order: ParentModel) {
+        lifecycleScope.launch {
+            val parentModel = withContext(Dispatchers.IO) {
+                val newOrderId = ShoppingCart.addOrder(order, this@MainActivity)
+                ShoppingCart.getOrderById(this@MainActivity, newOrderId.toInt())
+            }
+
+            if (parentModel != null) {
+                _adapter.addOrder(parentModel)
+                makeStatusNotification("New order arrived", this@MainActivity, "Alert!")
+                makeSound(this@MainActivity)
+                binding.recyclerView.visibility = View.VISIBLE
+                binding.nodata.root.visibility = View.GONE
             }
         }
     }
@@ -442,23 +575,21 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
      }*/
 
     var isInitialLoad = true
-    private fun initRecycler(){
-        //_adapter.setOrders(ShoppingCart.getOrders().filter { it -> it.orderStatusId != 4 }.toMutableList())
-        //binding.recyclerView = findViewById(R.id.rv_parent)
-        refreshOrders()
-        //binding.recyclerView.adapter = _adapter
+    private fun initRecycler() {
         binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
-            //adapter = _adapter
+            adapter = _adapter // Safely assign the adapter right away
         }
 
+        // Now trigger the background data fetch
+        refreshOrders()
     }
 
     fun addNewOrderExecute(order:ParentModel){
 
 
     }
-    fun addNewOrder(order: ParentModel){
+    /*fun addNewOrder(order: ParentModel){
         executor.execute {
             var newOrder = ShoppingCart.addOrder(order,this)
             var parentModel = ShoppingCart.getOrderById(this , newOrder.toInt())
@@ -472,7 +603,7 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
 
         }
         //viewModel.ItemsMutableLiveData.value = getOrders()
-    }
+    }*/
 
 
     private var output: PrintWriter? = null
@@ -482,7 +613,7 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
     private  var inputStream: InputStream? =null
 
     // private var scanner:Scanner?=null
-    internal inner  class thread1 : Runnable {
+    /*internal inner  class thread1 : Runnable {
         override fun run() {
             val socket: Socket
             try {
@@ -519,16 +650,16 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                     Thread2!!.start()
 
                     con=true
-                    /* Thread4 = Thread(thread4())
-                     Thread4!!.start()*/
+                    *//* Thread4 = Thread(thread4())
+                     Thread4!!.start()*//*
 
-                    /*while (scanner!!.hasNextLine()) {
+                    *//*while (scanner!!.hasNextLine()) {
                         var message:String = "${ scanner!!.nextLine() }"
                         runOnUiThread(Runnable {
                             tvMessages!!.append("client:" + message + "\n");
                         })
                     }
-*/
+*//*
                 } catch (e: IOException) {
                     e.printStackTrace()
                 }
@@ -536,20 +667,20 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                 e.printStackTrace()
             }
         }
-    }
+    }*/
     var con: Boolean=true
-    internal inner class thread2 (): Runnable {
+    /*internal inner class thread2 (): Runnable {
         override fun run() {
-            /* while (scanner!!.hasNextLine()) {
+            *//* while (scanner!!.hasNextLine()) {
                  var message:String = "${ scanner!!.nextLine() }"
                  runOnUiThread(Runnable {
                      tvMessages!!.append("client:" + message + "\n");
                  })
-             }*/
+             }*//*
             //var obj: Any?
-            /*while (objectInputStream!!.readObject().also { obj = it } !is EofIndicatorClass) {
+            *//*while (objectInputStream!!.readObject().also { obj = it } !is EofIndicatorClass) {
                 println(obj)
-            }*/
+            }*//*
 
 
 
@@ -564,17 +695,17 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                     // read the list of messages from the socket
                     // val listOfMessages=  objectInputStream!!.readObject()
 
-                    /* var listOfMessages = ArrayList<CartItemDisplay>()
-                     listOfMessages = objectInputStream!!.readObject() as ArrayList<CartItemDisplay>*/
+                    *//* var listOfMessages = ArrayList<CartItemDisplay>()
+                     listOfMessages = objectInputStream!!.readObject() as ArrayList<CartItemDisplay>*//*
 
                     var newOrder = objectInputStream!!.readObject()
 
                     //val listOfMessages =   objectInputStream!!.readObject() as List<CDMessage>
-                    /*val cartitms: ArrayList<CartItem> = ArrayList()
+                    *//*val cartitms: ArrayList<CartItem> = ArrayList()
                     for(i in listOfMessages.iterator()){
                         cartitms.add(i)
                     }
-                    viewModel!!.ItemsMutableLiveData.value =cartitms*/
+                    viewModel!!.ItemsMutableLiveData.value =cartitms*//*
 
                     if (newOrder != null) {
                         newOrder = newOrder  as ParentModel
@@ -611,7 +742,7 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
 
             }
         }
-    }
+    }*/
 
     internal inner class threadSendToCounterComplete(private val order: ParentModel, val orderStatusId:Int, val textDuration:String) : java.lang.Runnable {
         override fun run() {
@@ -657,14 +788,14 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
         }
     }
 
-    internal inner class thread4 (): Runnable {
+   /* internal inner class thread4 (): Runnable {
         override fun run() {
-            /* while (scanner!!.hasNextLine()) {
+            *//* while (scanner!!.hasNextLine()) {
                  var message:String = "${ scanner!!.nextLine() }"
                  runOnUiThread(Runnable {
                      tvMessages!!.append("client:" + message + "\n");
                  })
-             }*/
+             }*//*
 
 
             while (true) {
@@ -677,15 +808,15 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                     // read the list of messages from the socket
                     // val listOfMessages=  objectInputStream!!.readObject()
 
-                    /*  var listOfMessages = ArrayList<CartItemDisplay>()
-                      listOfMessages = objectInputStream!!.readObject() as ArrayList<CartItemDisplay>*/
+                    *//*  var listOfMessages = ArrayList<CartItemDisplay>()
+                      listOfMessages = objectInputStream!!.readObject() as ArrayList<CartItemDisplay>*//*
 
                     //val listOfMessages =   objectInputStream!!.readObject() as List<CDMessage>
-                    /*val cartitms: ArrayList<CartItem> = ArrayList()
+                    *//*val cartitms: ArrayList<CartItem> = ArrayList()
                     for(i in listOfMessages.iterator()){
                         cartitms.add(i)
                     }
-                    viewModel!!.ItemsMutableLiveData.value =cartitms*/
+                    viewModel!!.ItemsMutableLiveData.value =cartitms*//*
 
                     if (listOfMessages != null) {
 
@@ -706,8 +837,8 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
             }
         }
     }
-
-    fun getLocalIpAddress(): String {
+*/
+    /*fun getLocalIpAddress(): String {
 
         val wifiManager: WifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
 
@@ -719,11 +850,45 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                         ipInt
                 ).array()
         ).getHostAddress();
+    }*/
+
+
+
+    fun getLocalIpAddress(): String {
+        try {
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            for (intf in interfaces) {
+                val addrs = intf.inetAddresses
+                for (addr in addrs) {
+                    // We only want IPv4 addresses that are NOT the loopback (127.0.0.1)
+                    if (!addr.isLoopbackAddress && addr is Inet4Address) {
+                        return addr.hostAddress ?: "0.0.0.0"
+                    }
+                }
+            }
+        } catch (ex: Exception) {
+            Log.e("IP_FETCH", "Failed to get IP Address", ex)
+        }
+        return "Disconnected" // Fallback message
     }
 
 
 
-    internal inner  class threadStart : Runnable {
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // 1. Stop the server and release Port 8081
+        kdsServerManager.stopServer()
+
+        // 2. Clean up the media player to prevent memory leaks
+        stopSound()
+
+        // 3. Cancel the background sync job
+        jobPostStatus.cancel()
+    }
+
+
+    /*internal inner  class threadStart : Runnable {
         override fun run() {
             val socket: Socket
             try {
@@ -781,7 +946,7 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                     }
                 }
 
-               /* try {
+               *//* try {
                     socket = serverSocket!!.accept()
                     //scanner = Scanner(socket.getInputStream())
                     output = PrintWriter(socket.getOutputStream(), true)
@@ -805,25 +970,25 @@ class MainActivity : AppCompatActivity(),CoroutineScope {
                     Thread2!!.start()
 
                     con=true
-                    *//* Thread4 = Thread(thread4())
-                     Thread4!!.start()*//*
+                    *//**//* Thread4 = Thread(thread4())
+                     Thread4!!.start()*//**//*
 
-                    *//*while (scanner!!.hasNextLine()) {
+                    *//**//*while (scanner!!.hasNextLine()) {
                         var message:String = "${ scanner!!.nextLine() }"
                         runOnUiThread(Runnable {
                             tvMessages!!.append("client:" + message + "\n");
                         })
                     }
-*//*
+*//**//*
                 } catch (e: IOException) {
                     e.printStackTrace()
-                }*/
+                }*//*
             } catch (e: IOException) {
                 IsKDSConnected=false
                 e.printStackTrace()
             }
         }
-    }
+    }*/
 
 
     internal inner class ClientHandler(private val s: Socket, private val dis: ObjectInputStream, private val dos: ObjectOutputStream) : Thread() {

@@ -2,7 +2,9 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
 }
-apply plugin: 'kotlin-kapt'
+// REPLACED kotlin-kapt WITH KSP
+apply plugin: 'com.google.devtools.ksp'
+
 android {
     compileSdk 36
 
@@ -10,21 +12,35 @@ android {
         applicationId "com.byteswiz.shoppazingkds"
         minSdkVersion 23
         targetSdkVersion 36
-        versionCode 17
-        versionName "1.0.017"
+        versionCode 20
+        versionName "1.0.020"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            // variant with `isDebuggable=false`.
-            minifyEnabled false
 
+           /* ndk {
+                debugSymbolLevel 'FULL'
+            }*/
+
+            // Enables code shrinking, obfuscation, and optimization for only
+            // your project's release build type. Make sure to use a build
+            // variant with `isDebuggable=false`.
+            minifyEnabled true
 
             // Enables resource shrinking, which is performed by the
             // Android Gradle plugin.
-            //shrinkResources true
+            shrinkResources true
+
+
+            // ADD THIS LINE: Tells it to use the auto-generated debug key for testing
+            signingConfig signingConfigs.debug
+
+            // Includes the default ProGuard rules files that are packaged with
+            // the Android Gradle plugin. To learn more, go to the section about
+            // R8 configuration files.
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -35,10 +51,10 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
-    kapt {
-        arguments {
-            arg("room.schemaLocation", "$projectDir/schemas".toString())
-        }
+
+    // REPLACED kapt block with ksp block for Room schemas
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas".toString())
     }
 
     namespace 'com.byteswiz.shoppazingkds'
@@ -104,9 +120,9 @@ dependencies {
     // Saved state module for ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:$lifecycle_version")
 
-    // Annotation processor
+    // Annotation processor - REPLACED kapt WITH ksp
     //noinspection LifecycleAnnotationProcessorWithJava8
-    kapt "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
+    ksp "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
     // alternately - if using Java8, use the following instead of lifecycle-compiler
     implementation("androidx.lifecycle:lifecycle-common-java8:$lifecycle_version")
 
@@ -152,14 +168,13 @@ dependencies {
     //implementation 'com.github.AppIntro:AppIntro:4.2.3'
 
 
-
-    def room_version = "2.5.1"
+    def room_version = "2.6.1"
 
     implementation "androidx.room:room-runtime:$room_version"
     // optional - Kotlin Extensions and Coroutines support for Room
     implementation "androidx.room:room-ktx:$room_version"
-    // To use Kotlin annotation processing tool (kapt)
-    kapt("androidx.room:room-compiler:$room_version")
+    // REPLACED kapt WITH ksp
+    ksp("androidx.room:room-compiler:$room_version")
 
     implementation "com.squareup.retrofit2:retrofit:2.9.0"
     implementation "com.squareup.retrofit2:adapter-rxjava2:2.6.2"
@@ -175,6 +190,5 @@ dependencies {
     // For Kotlin users also import the Kotlin extensions library for Play In-App Update:
     implementation("com.google.android.play:app-update-ktx:2.1.0")
     //In-app updates
-
 
 }

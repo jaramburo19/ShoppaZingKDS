@@ -213,10 +213,15 @@ class ExampleAdapter(var diningOptionName: String,
             var txtQNo: TextView = itemView.findViewById<View>(R.id.txtQNo) as TextView
             fun bind(diningOptionName: String, qNo: String?){
                 txtDiningOption.text = diningOptionName
-                if(!qNo.isNullOrEmpty())
+                if(!qNo.isNullOrEmpty() )
                 {
-                    txtQNo.visibility=View.VISIBLE
-                    txtQNo.text ="QUEUE: " + qNo
+                    if(qNo!="0"){
+                        txtQNo.visibility=View.VISIBLE
+                        txtQNo.text ="QUEUE: " + qNo
+                    }
+                    else
+                        txtQNo.visibility=View.GONE
+
                 }
                 else
                     txtQNo.visibility=View.GONE
